@@ -1,0 +1,15 @@
+coil1:
+  capacitance: 1600.e-6   # [F] Total capacitance in the capacitance bank 
+  R: 22.e+6               # [Ohm] Resistance for the resistor in the voltage divider
+  R_pot: 100.e+3          # [Ohm] Total resistance over the potentiometer
+  threshold_voltage: 0.5  # [V] Threshold voltage for switching power ON/OFF
+  set_voltage_pin: 22     # Pin for setting the voltage with the potentiometer
+  ready_pin: 23           # Pin for checking if CB is ready to fire
+
+coil2:
+  capacitance: 1600.e-6   # [F] Total capacitance in the capacitance bank 
+  R: 22.e+6               # [Ohm] Resistance for the resistor in the voltage divider
+  R_pot: 100.e+3          # [Ohm] Total resistance over the potentiometer
+  threshold_voltage: 0.5  # [V] Threshold voltage for switching power ON/OFF
+  set_voltage_pin: 25     # Pin for setting the voltage with the potentiometer
+  ready_pin: 26           # Pin for checking if CB is ready to fire

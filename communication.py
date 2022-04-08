@@ -1,4 +1,5 @@
 import spidev
+import serial
 
 
 class Arduino:
@@ -7,33 +8,50 @@ class Arduino:
 	# Commands
 	FIRE = "FIRE"
 	READ_VOLTAGE = "VOLTAGE"
+	TEST = "TEST"
 	END = '\n'
 	SEP = ','
 
 
-	def __init__(self, port: str, baudrate: int, timeout: int):
+	def __init__(self, port: str, baudrate: int, timeout: int=1):
 		self.port = port
 		self.baudrate = baudrate
 		self.timeout = timeout
 
+		self.arduino = None
+
 	def send(self, message: str):
 		"""Send a message to the Arduino"""
-		print(message)
+		self.arduino.write(bytes(message, 'utf-8'))
 
 	def read(self) -> str:
 		"""Read a response from the Arduino"""
-		print("Reading")
+		response = ""
+		while True:
+			char = port.read()
+			if Arduino.END == char:
+				break
+			response += char
+		return response
 
-	def test_connection(self):
+	def test_connection(self, test_times: int=10) -> bool:
 		"""Test the connection with the Arduino"""
+		for i in range(test_times):
+			self.send(Arduino.TEST)
+			response = self.read()
+
+			if response == "OK":
+				return True
+		return False
 
 	def connect(self) -> bool:
 		"""Connect to the Arduino"""
-		print("Connection on")
+		self.arduino = serial.Serial(port=self.port, baudrate=self.baudrate, timeout=self.timeout)
+		return self.test_connection()
 
 	def close(self):
 		"""Close connection to the Arduino"""
-		print("Closing connection")
+		self.arduino.close()
 
 
 class Potentiometer:

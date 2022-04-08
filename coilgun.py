@@ -19,7 +19,6 @@ class Coil:
 		R_pot: float, 				# Total resistance over the potentiometer
 		threshold_voltage: float, 	# Threshold voltage for switching power ON/OFF
 		set_voltage_pin: int, 		# Pin for setting the voltage with the potentiometer
-		drain_voltage_pin: int, 	# Pin for draining the CB
 		ready_pin: int, 			# Pin for checking if CB is ready to fire
 	):
 		self.capacitance = capacitance
@@ -34,7 +33,6 @@ class Coil:
 		self.drain_voltage_pin = drain_voltage_pin
 
 		GPIO.setmode(self.set_voltage_pin, GPIO.OUTPUT)
-		GPIO.setmode(self.drain_voltage_pin, GPIO.OUTPUT)
 		GPIO.setmode(self.ready_pin, GPIO.INPUT)
 
 		GPIO.output(self.set_voltage_pin, GPIO.HIGH)
@@ -46,17 +44,20 @@ class Coil:
 		CB.TOTAL += 1
 
 	@classmethod
-	def read_voltages(self, arduino: Arduino) -> list[int]:
+	def read_voltages(cls, arduino: Arduino) -> list[int]:
 		"""Read voltages from all CBs"""
 		# Send command
 		arduino.send(Arduino.read_voltage)
-		# Send pin to read over
-		arduino.send(str(self.read_voltage_pin))
-
+		# Receive response
 		voltages = arduino.read()
 
 		# Convert to integers and split the string into an array
 		return [int(v) for v in voltages.split(Arduino.SEP)]
+
+	@classmethod
+	def from_dict(cls, coil_dict: dict) -> cls:
+		"""Create a coil from a dict"""
+		return cls(**coil_dict)
 
 	def read_voltage(self, voltages: list[int]) -> float:
 		"""Read the voltage over this CB"""
@@ -103,15 +104,27 @@ class Coil:
 class Coilgun:
 	"""Class for controling the coilgun"""
 
-	def __init__(self, coils: list[Coil], arduino: Arduino, potentiometer: Potentiometer, HV_pin: int, projectile_dimeter: float):
+	def __init__(
+		self, 
+		coils: list[Coil], 
+		arduino: Arduino, 
+		potentiometer: Potentiometer, 
+		HV_pin: int,
+		drain_voltage_pin: int,
+		projectile_dimeter: float
+	):
 		self.coils = coils
 		self.arduino = arduino
 		self.potentiometer = potentiometer
 		self.HV_pin = HV_pin
+		self.drain_voltage_pin = drain_voltage_pin
 		self.projectile_dimeter = projectile_dimeter
 
 		GPIO.setmode(self.HV_pin, GPIO.OUTPUT)
-		GPIO.output(self.HV_pin, GPIO.HIGH)
+		GPIO.setmode(self.drain_voltage_pin, GPIO.OUTPUT)
+
+		self.HV_OFF()
+		self.drain()
 
 	def set_voltages(self, voltages: list[float]):
 		"""Set the maximum voltages for all CBs"""
@@ -135,8 +148,8 @@ class Coilgun:
 		"""Charge the coilgun"""
 		self.set_voltages(max_voltages)
 
-		# Open High Voltage
-		GPIO.output(self.HV_pin, GPIO.LOW)
+		self.no_drain()
+		self.HV_ON()
 
 		while not self.ready2fire():
 			time.sleep(1)
@@ -145,7 +158,7 @@ class Coilgun:
 			# TODO: Something better here (LED strip and more)
 			print(voltages)
 
-		GPIO.output(self.HV_pin, GPIO.HIGH)
+		self.HV_OFF()
 
 	def fire(self, max_voltages: list[float]):
 		"""Fire the coilgun"""
@@ -155,6 +168,8 @@ class Coilgun:
 		# Calculate the projectile velocities at the sensors
 		velocities = [projectile_dimeter / (int(t_us) * 1e-6) for t_us in blocking_times_us.split(Arduino.SEP)]
 
+		self.drain()
+
 		return velocities
 
 	def ready2fire(self):
@@ -163,6 +178,22 @@ class Coilgun:
 			if not coil.ready2fire():
 				return False
 		return True
+
+	def HV_ON(self):
+		"""Turn on HIGH VOLTAGE"""
+		GPIO.output(self.HV_pin, GPIO.LOW)
+
+	def HV_OFF(self):
+		"""Turn off HIGH VOLTAGE"""
+		GPIO.output(self.HV_pin, GPIO.HIGH)
+
+	def drain(self):
+		"""Drain all CBs"""
+		GPIO.output(self.drain_voltage_pin, GPIO.HIGH)
+
+	def no_drain(self):
+		"""No drain of CBs"""
+		GPIO.output(self.drain_voltage_pin, GPIO.LOW)
 
 
 
