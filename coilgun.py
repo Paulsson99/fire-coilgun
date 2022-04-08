@@ -30,24 +30,23 @@ class Coil:
 
 		# Pins
 		self.set_voltage_pin = set_voltage_pin
-		self.drain_voltage_pin = drain_voltage_pin
+		self.ready_pin = ready_pin
 
 		GPIO.setup(self.set_voltage_pin, GPIO.OUT)
 		GPIO.setup(self.ready_pin, GPIO.IN)
 
 		GPIO.output(self.set_voltage_pin, GPIO.HIGH)
-		GPIO.output(self.drain_voltage_pin, GPIO.LOW)
 
 
 		# Set a unique ID
-		self.id = CB.TOTAL
-		CB.TOTAL += 1
+		self.id = Coil.TOTAL
+		Coil.TOTAL += 1
 
 	@classmethod
 	def read_voltages(cls, arduino: Arduino) -> list[int]:
 		"""Read voltages from all CBs"""
 		# Send command
-		arduino.send(Arduino.read_voltage)
+		arduino.send(Arduino.READ_VOLTAGES)
 		# Receive response
 		voltages = arduino.read()
 
@@ -55,7 +54,7 @@ class Coil:
 		return [int(v) for v in voltages.split(Arduino.SEP)]
 
 	@classmethod
-	def from_dict(cls, coil_dict: dict) -> cls:
+	def from_dict(cls, coil_dict: dict):
 		"""Create a coil from a dict"""
 		return cls(**coil_dict)
 
@@ -166,7 +165,7 @@ class Coilgun:
 		blocking_times_us = self.arduino.read()
 
 		# Calculate the projectile velocities at the sensors
-		velocities = [projectile_dimeter / (int(t_us) * 1e-6) for t_us in blocking_times_us.split(Arduino.SEP)]
+		velocities = [self.projectile_dimeter / (int(t_us) * 1e-6) for t_us in blocking_times_us.split(Arduino.SEP)]
 
 		self.drain()
 
@@ -194,6 +193,12 @@ class Coilgun:
 	def no_drain(self):
 		"""No drain of CBs"""
 		GPIO.output(self.drain_voltage_pin, GPIO.LOW)
+
+	def close(self):
+		"""Cleanup"""
+		self.arduino.close()
+		self.potentiometer.close()
+		GPIO.cleanup()
 
 
 

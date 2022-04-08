@@ -1,5 +1,6 @@
 import spidev
 import serial
+import time
 
 
 class Arduino:
@@ -7,7 +8,7 @@ class Arduino:
 
 	# Commands
 	FIRE = "FIRE"
-	READ_VOLTAGE = "VOLTAGE"
+	READ_VOLTAGES = "VOLTAGE"
 	TEST = "TEST"
 	END = '\n'
 	SEP = ','
@@ -28,8 +29,8 @@ class Arduino:
 		"""Read a response from the Arduino"""
 		response = ""
 		while True:
-			char = port.read()
-			if Arduino.END == char:
+			char = self.arduino.read().decode('utf-8')
+			if Arduino.END == char or char == '':
 				break
 			response += char
 		return response
@@ -42,12 +43,18 @@ class Arduino:
 
 			if response == "OK":
 				return True
+			time.sleep(1)
 		return False
 
 	def connect(self) -> bool:
 		"""Connect to the Arduino"""
 		self.arduino = serial.Serial(port=self.port, baudrate=self.baudrate, timeout=self.timeout)
-		return self.test_connection()
+		self.arduino.flush()
+		time.sleep(1)
+		if not self.test_connection():
+			self.close()
+			return False
+		return True
 
 	def close(self):
 		"""Close connection to the Arduino"""
@@ -70,7 +77,10 @@ class Potentiometer:
 		Set the resistance of a potentiometer. 
 		Select the potentiometer by pulling C0 LOW and HIGH
 		"""
-		spi.xfer([self.MSB, x])
+		self.spi.xfer([self.MSB, x])
+
+	def close(self):
+		self.spi.close()
 
 class PinIsNotConfigured(Exception):
 	pass

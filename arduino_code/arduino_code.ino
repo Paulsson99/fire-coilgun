@@ -1,10 +1,10 @@
-#define COILS 2
+#define COILS 1
 #define SEP ','
 #define END '\n'
 
-int fire_pins[COILS] = {10, 11};
-int sensor_pins[COILS] = {20, 21};
-int voltage_pins[COILS] = {A0, A1};
+int fire_pins[COILS] = {20};
+int sensor_pins[COILS] = {30};
+int voltage_pins[COILS] = {A0};
 
 void setup() {
   // Setup all the pins
