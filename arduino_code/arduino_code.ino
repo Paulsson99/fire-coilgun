@@ -1,5 +1,5 @@
 #define COILS 2
-#define SEPARATOR ','
+#define SEP ','
 #define END '\n'
 
 int fire_pins[COILS] = {10, 11};
@@ -7,8 +7,6 @@ int sensor_pins[COILS] = {20, 21};
 int voltage_pins[COILS] = {A0, A1};
 
 void setup() {
-  // put your setup code here, to run once:
-
   // Setup all the pins
   for (int i = 0; i < COILS; i++) {
     pinMode(fire_pins[i], OUTPUT);
@@ -47,7 +45,7 @@ void SendData(unsigned long data[], int size_of_data) {
   String content = "";
   for (int i = 0; i < size_of_data; i++) {
     if (i > 0) {
-      content += SEPARATOR;
+      content += SEP;
     }
     content += data[i];
   }
