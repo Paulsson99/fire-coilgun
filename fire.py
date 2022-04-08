@@ -1,11 +1,12 @@
 from communication import Arduino, Potentiometer
 from coilgun import Coil, Coilgun
 import yaml
+import time
 
 
 # Pins
-HV_pin = 4
-drain_pin = 5
+HV_pin = 18
+drain_pin = 21
 
 # Data
 projectile_diameter = 8.8e-3
@@ -31,7 +32,14 @@ def main():
 
 	try:
 		coilgun = Coilgun(coils[:1], arduino, potentiometer, HV_pin, drain_pin, projectile_diameter)
-		print(coilgun.read_voltages())
+		coilgun.no_drain()
+		while True:
+			coilgun.HV_OFF()
+			print("HV OFF")
+			time.sleep(3)
+			coilgun.HV_ON()
+			print("HV ON")
+			time.sleep(3)
 	finally:
 		coilgun.close()
 

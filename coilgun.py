@@ -28,6 +28,8 @@ class Coil:
 		# Total resistance in the voltage divider
 		self.R_tot = self.R + self.R_pot
 
+		self.threshold_voltage = threshold_voltage
+
 		# Pins
 		self.set_voltage_pin = set_voltage_pin
 		self.ready_pin = ready_pin
@@ -90,14 +92,14 @@ class Coil:
 
 		# Pull selector pin LOW before transfering data
 		GPIO.output(self.set_voltage_pin, GPIO.LOW)
-		potentiometer.set(x2send, pin=self.set_voltage_pin)
+		potentiometer.set(x2send)
 		GPIO.output(self.set_voltage_pin, GPIO.HIGH)
 
 		return real_voltage
 
 	def ready2fire(self):
 		"""Check if the coil is ready to fire"""
-		return GPIO.input(self.ready_pin)
+		return not GPIO.input(self.ready_pin)
 
 
 class Coilgun:
@@ -188,11 +190,11 @@ class Coilgun:
 
 	def drain(self):
 		"""Drain all CBs"""
-		GPIO.output(self.drain_voltage_pin, GPIO.HIGH)
+		GPIO.output(self.drain_voltage_pin, GPIO.LOW)
 
 	def no_drain(self):
 		"""No drain of CBs"""
-		GPIO.output(self.drain_voltage_pin, GPIO.LOW)
+		GPIO.output(self.drain_voltage_pin, GPIO.HIGH)
 
 	def close(self):
 		"""Cleanup"""

@@ -3,8 +3,8 @@
 #define END '\n'
 
 int fire_pins[COILS] = {20};
-int sensor_pins[COILS] = {30};
-int voltage_pins[COILS] = {A0};
+int sensor_pins[COILS] = {52};
+int voltage_pins[COILS] = {A15};
 
 void setup() {
   // Setup all the pins
