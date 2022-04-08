@@ -32,8 +32,8 @@ class Coil:
 		self.set_voltage_pin = set_voltage_pin
 		self.drain_voltage_pin = drain_voltage_pin
 
-		GPIO.setmode(self.set_voltage_pin, GPIO.OUTPUT)
-		GPIO.setmode(self.ready_pin, GPIO.INPUT)
+		GPIO.setup(self.set_voltage_pin, GPIO.OUT)
+		GPIO.setup(self.ready_pin, GPIO.IN)
 
 		GPIO.output(self.set_voltage_pin, GPIO.HIGH)
 		GPIO.output(self.drain_voltage_pin, GPIO.LOW)
@@ -120,8 +120,8 @@ class Coilgun:
 		self.drain_voltage_pin = drain_voltage_pin
 		self.projectile_dimeter = projectile_dimeter
 
-		GPIO.setmode(self.HV_pin, GPIO.OUTPUT)
-		GPIO.setmode(self.drain_voltage_pin, GPIO.OUTPUT)
+		GPIO.setup(self.HV_pin, GPIO.OUT)
+		GPIO.setup(self.drain_voltage_pin, GPIO.OUT)
 
 		self.HV_OFF()
 		self.drain()

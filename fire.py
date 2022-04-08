@@ -12,7 +12,7 @@ projectile_diameter = 8.8e-3
 
 
 def main():
-	arduino = Arduino.start("dev/", 9600, 10)
+	arduino = Arduino.start("/dev/ttyACM0", 9600, 10)
 
 	if not arduino.connect():
 		print("Failed to connect to the Arduino.")
@@ -27,7 +27,10 @@ def main():
 
 	coils = [Coil.from_dict(coils_dict[coil]) for coil in sorted_coils]
 
-	coilgun = Coilgun(coils, arduino, potentiometer, HV_pin, drain_pin, projectile_diameter)
+	try:
+		coilgun = Coilgun(coils, arduino, potentiometer, HV_pin, drain_pin, projectile_diameter)
+	finally:
+		coilgun.close()
 
 if __name__ == '__main__':
 	main()

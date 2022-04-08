@@ -35,6 +35,10 @@ void loop() {
   else if (command == "VOLTAGE") {
     ReadVoltage();
   }
+  else if (command == "TEST") {
+    Serial.print("OK");
+    Serial.print(END);
+  }
   else {
     Serial.print("UNKNOWN COMMAND...");
     Serial.print(END);
