@@ -2,9 +2,9 @@
 #define SEP ','
 #define END '\n'
 
-int fire_pins[COILS] = {20};
-int sensor_pins[COILS] = {52};
-int voltage_pins[COILS] = {A15};
+int fire_pins[COILS] = {6};
+int sensor_pins[COILS] = {7};
+int voltage_pins[COILS] = {A0};
 
 void setup() {
   // Setup all the pins
@@ -17,7 +17,7 @@ void setup() {
   }
 
   // Begin serial communication
-  Serial.begin(9600);
+  Serial.begin(115200);
 }
 
 void loop() {
