@@ -9,7 +9,20 @@ class Arduino:
 	# Commands
 	FIRE = "FIRE"
 	READ_VOLTAGES = "VOLTAGE"
+	ON = "ON"
+	OFF = "OFF"
+	HV = "HV"
+	DRAIN = "DRAIN"
 	TEST = "TEST"
+
+	# Expected responses
+	OK = "OK"			# A good test
+	HV_ON = "HV ON"		# HV sucessfully turned on
+	HV_OFF = "HV_OFF"	# HV sucessfully turned off
+	DRAIN_RESPONSE = "Drain pins set to: "
+	HV_RESPONSE = "HV pins set to: "
+
+	# Communication chars
 	END = '\n'
 	SEP = ','
 
@@ -61,26 +74,5 @@ class Arduino:
 		self.arduino.close()
 
 
-class Potentiometer:
-	"""Class for setting the resistance in a digtal potentiometer"""
-
-	MSB = 0b00010001 	# Command byte for writing to the potentiometer
-
-	def __init__(self):
-		self.spi = spidev.SpiDev()
-		self.spi.open(0, 0)
-		self.spi.max_speed_hz = 976000
-		self.selector_pins = []
-
-	def set(self, x: int):
-		"""
-		Set the resistance of a potentiometer. 
-		Select the potentiometer by pulling C0 LOW and HIGH
-		"""
-		self.spi.xfer([self.MSB, x])
-
-	def close(self):
-		self.spi.close()
-
-class PinIsNotConfigured(Exception):
+class CommunicationError(Exception):
 	pass

@@ -1,12 +1,7 @@
-from requests import ReadTimeout
-from communication import Arduino, Potentiometer
-import RPi.GPIO as GPIO
-import time
+from communication import Arduino, CommunicationError
 import numpy as np
-
-
-# Settings
-GPIO.setmode(GPIO.BCM)
+import time
+import logging
 
 
 class Coil:
@@ -17,51 +12,20 @@ class Coil:
 	def __init__(
 		self,
 		capacitance: float,			# Total capacitance in the capacitance bank [F]
-		R: float, 					# Resistance for the resistor in the voltage divider
-		R_pot: float, 				# Total resistance over the potentiometer
-		threshold_voltage: float, 	# Threshold voltage for switching power ON/OFF
-		set_voltage_pin: int, 		# Pin for setting the voltage with the potentiometer
-		ready_pin: int, 			# Pin for checking if CB is ready to fire
-		c1: float,
-		c2: float,
-		c3: float,
-		k1: float,
-		k2: float
+		R1: float, 					# First resistance in the voltage divider
+		R2: float, 					# Second resistance in the voltage divider
 	):
 		self.capacitance = capacitance
 
 		self.R = R
 		self.R_pot = R_pot
-		# Total resistance in the voltage divider
-		self.R_tot = self.R + self.R_pot
-
-		self.threshold_voltage = threshold_voltage
-
-		# Pins
-		self.set_voltage_pin = set_voltage_pin
-		self.ready_pin = ready_pin
-
-		GPIO.setup(self.set_voltage_pin, GPIO.OUT)
-		GPIO.setup(self.ready_pin, GPIO.IN)
-
-		GPIO.output(self.set_voltage_pin, GPIO.HIGH)
 
 		# Is ready
-		self.isready = False
+		self.READY = False
 
 		# Set a unique ID
 		self.id = Coil.TOTAL
 		Coil.TOTAL += 1
-
-		# Potentiometer is set to
-		self.pot_x = 0
-
-		# Constants
-		self.c1 = c1
-		self.c2 = c2
-		self.c3 = c3
-		self.k1 = k1
-		self.k2 = k2
 
 	@classmethod
 	def read_voltages(cls, arduino: Arduino) -> list[int]:
@@ -88,167 +52,178 @@ class Coil:
 		# Convert from 0-1023 to 0-5V
 		pot_voltage = pot_voltage * 5 / 1023
 
-		bias = self.calculate_bias_point(self.pot_x)
-
 		# Convert to voltage over CB
-		return (pot_voltage - bias) / self.calculate_voltage_slope(bias)
+		return pot_voltage * (self.R1 + self.R2) / self.R2
 
-	def calculate_bias_point(self, x: int) -> float:
-		"""Calculate bias point for the potentiometer"""
-		return self.k1*x + self.k2
-	
-	def calculate_voltage_slope(self, bias_point: float) -> float:
-		return self.c1*bias_point**2 + self.c2*bias_point + self.c3
-
-	def set_voltage(self, voltage: float, potentiometer: Potentiometer) -> float:
-		"""Set the maximum voltage over the CB by turning a potentiometer"""
-
-		bias_point = self.calculate_bias_point(self.pot_x)
-		for i in range(30):
-			# Exact position for the potentiometer
-			x = self.R_tot * (self.threshold_voltage - bias_point) / (self.R_pot * voltage)
-
-			# Convert to an int (0-255)
-			x2send = round(x*255)
-
-			# x2send must be between 0 and 255
-			x2send = max(min(x2send, 255), 0)
-
-			bias_point = self.calculate_bias_point(x2send)
-
-		# What is the actual voltage set
-		if x2send:
-			real_voltage = self.R_tot * (self.threshold_voltage - bias_point) / (x2send / 255 * self.R_pot)
-		else:
-			real_voltage = float('inf')
-
-		if x > 1:
-			print(f"{voltage}V is to low a voltage for the feedback to work. Setting voltage {real_voltage}V instead.")
-
-		self.set_pot(x2send, potentiometer)
-
-		return real_voltage
-
-	def set_pot(self, x: int, potentiometer: Potentiometer):
-		"""Set the potentiometer"""
-		self.pot_x = x
-		# Pull selector pin LOW before transfering data
-		GPIO.output(self.set_voltage_pin, GPIO.LOW)
-		potentiometer.set(x)
-		GPIO.output(self.set_voltage_pin, GPIO.HIGH)
-
-	def ready2fire(self):
-		"""Check if the coil is ready to fire"""
-		if self.isready:
-			# If it has ever been ready it is more or less ready now also
+	def control_voltage(self, voltage, max_voltage) -> bool:
+		"""
+		Control the voltage for the coil. 
+		Return true if it needs more voltage, False otherwise
+		"""
+		if self.READY:
 			return True
-		self.isready = not GPIO.input(self.ready_pin)
-		return self.isready
+		self.READY = voltage > max_voltage
+		return (voltages < max_voltage) or self.READY
 
 	def reset(self):
 		"""Reset the coil"""
-		self.isready = False
+		self.READY = False
+
 
 
 class Coilgun:
 	"""Class for controling the coilgun"""
 
+	MAX_VOLTAGE_FOR_SAFE_DRAIN = 20
+
 	def __init__(
 		self, 
 		coils: list[Coil], 
 		arduino: Arduino, 
-		potentiometer: Potentiometer, 
-		HV_pin: int,
-		drain_voltage_pin: int,
-		projectile_dimeter: float
+		projectile_dimeter: float,
+		logger: logging.Logger = None
 	):
 		self.coils = coils
 		self.arduino = arduino
-		self.potentiometer = potentiometer
-		self.HV_pin = HV_pin
-		self.drain_voltage_pin = drain_voltage_pin
 		self.projectile_dimeter = projectile_dimeter
 
-		GPIO.setup(self.HV_pin, GPIO.OUT)
-		GPIO.setup(self.drain_voltage_pin, GPIO.OUT)
+		# Create a default logger
+		if logger is None:
+			logger = logging.getLogger('Coilgun')
+			# Add console logging to the logger
+			c_handler = logging.StreamHandler()
+			c_handler.setLevel(logging.WARNING)
+			c_format = logging.Formatter('%(name)s : %(levelname)s : %(message)s')
+			c_handler.setFormatter(c_format)
+			logger.addHandler(c_handler)
+		self.logger = logger
 
-		self.reset()
+		# Logging
+		self.logger.debug(f"Coilgun with {len(self)} coils was created")
 
-	def reset(self):
+		# Startup 
+		self.OFF()
+
+	def OFF(self):
 		"""Reset the coilgun"""
-		self.HV_OFF()
-		self.DRAIN_CB()
+		self.MAIN_HV_OFF()
+		# Drain and turn off HV to all CBs
+		self.DRAIN_CB([True] * len(self))
+		self.HV_2_CB([False] * len(self))
+
 		for coil in self.coils:
 			coil.reset()
 
-	def set_voltages(self, voltages: list[float]):
-		"""Set the maximum voltages for all CBs"""
-		set_voltages = []
-		for coil, voltage in zip(self.coils, voltages):
-			set_voltage = coil.set_voltage(voltage, potentiometer=self.potentiometer)
-			set_voltages.append(set_voltage)
-		return set_voltages
+		# Logging
+		self.logger.debug("Coilgun was turned off")
 
-	def read_voltages(self):
+	def READ_VOLTAGES(self):
 		"""Read all voltages for all CBs"""
 
 		# Read all voltages with the Arduino
 		pot_values = Coil.read_voltages(arduino=self.arduino)
+		self.logger.debug(f"Voltage values read from the Arduino: {pot_values}")
 
-		return [coil.read_voltage(pot_values) for coil in self.coils]
+		voltages = [coil.read_voltage(pot_values) for coil in self.coils]
+		self.logger.debug(f"Arduino voltages converted to: {voltages}")
 
-	def fire(self):
+		return voltages
+
+	def FIRE(self):
 		"""Fire the coilgun"""
+		# Fire coilgun and read sensor blocking time in microseconds
 		self.arduino.send(Arduino.FIRE)
+		self.logger.debug(f"Coilgun fired")
 		blocking_times_us = self.arduino.read()
+		self.logger.debug(f"Sensors were blocked for {blocking_times_us} us")
 
 		# Calculate the projectile velocities at the sensors
 		blocking_times = np.array([int(t_us) * 1e-6 for t_us in blocking_times_us.split(Arduino.SEP)])
 		velocities = self.projectile_dimeter / blocking_times
+		self.logger.debug(f"Calculated velocities for the projectile: {velocities}")
 
 		return velocities
 
-	def charge(self):
-		"""Charge the coilgun"""
-		self.CHARGE_CB()
-		self.HV_ON()
-
-	def stop_charge(self):
-		self.HV_OFF()
-		self.DRAIN_CB()
-
-	def ready2fire(self):
+	def READY_2_FIRE(self):
 		"""Check if the coilgun is ready to fire"""
 		for coil in self.coils:
-			if not coil.ready2fire():
+			if not coil.READY:
 				return False
 		return True
 
-	def HV_ON(self):
+	def MAIN_HV_ON(self):
 		"""Turn on HIGH VOLTAGE"""
-		GPIO.output(self.HV_pin, GPIO.LOW)
+		self.arduino.send("ON")
+		response = self.arduino.read()
+		if not response == Arduino.HV_ON:
+			self.logger.warning(f"Arduino did not turn on main HV correctly")
+			raise CommunicationError("Arduino did not turn on main HV correctly")
+		self.logger.debug(f"Main HV turned on")
 
-	def HV_OFF(self):
+	def MAIN_HV_OFF(self):
 		"""Turn off HIGH VOLTAGE"""
-		GPIO.output(self.HV_pin, GPIO.HIGH)
+		self.arduino.send("OFF")
+		response = self.arduino.read()
+		if not response == Arduino.OV_OFF:
+			self.logger.critical(f"Arduino did not turn off main HV correctly")
+			raise CommunicationError("Arduino did not turn off main HV correctly")
+		self.logger.debug(f"Main HV turned off")
 
-	def DRAIN_CB(self):
+	def DRAIN_CB(self, CBs_to_drain: list[bool]):
 		"""Drain all CBs"""
-		GPIO.output(self.drain_voltage_pin, GPIO.LOW)
+		message = ''.join(['1' for CB in CBs_to_drain if CB else '0'])
+		self.logger.debug(f"Draining command: {message}")
 
-	def CHARGE_CB(self):
-		"""No drain of CBs"""
-		GPIO.output(self.drain_voltage_pin, GPIO.HIGH)
+		response = self.arduino.read()
+		if not Arduino.DRAIN_RESPONSE in response:
+			self.logger.critical(f"Arduino did not drain CBs correctly")
+			raise CommunicationError("Arduino did not drain CBs correctly")
+		self.logger.debug(f"CBs drained")
+
+	def HV_2_CB(self, HV_states: list[bool]):
+		"""Turn HV ON/OFF"""
+		message = ''.join(['1' for CB in HV_states if CB else '0'])
+		self.logger.debug(f"HV command: {message}")
+
+		response = self.arduino.read()
+		if not Arduino.DRAIN_RESPONSE in response:
+			self.logger.critical(f"Arduino did not set HV to CBs correctly")
+			raise CommunicationError("Arduino did not set HV to CBs correctly")
+		self.logger.debug(f"HV set")
+
+	def CHARGE_COILGUN(self, max_voltages: list[float]):
+		"""Charge the coilgun"""
+		self.DRAIN_CB([False] * len(self))
+		self.HV_2_CB([True] * len(self))
+		self.MAIN_HV_ON()
+
+		self.logger.info(f"Charging coilgun to {voltages}V")
+
+		try:
+			while not self.READY_2_FIRE():
+				voltages = self.read_voltages()
+				HV_on_off = []
+				for coil, voltage, max_voltage in zip(self.coils, voltages, max_voltages):
+					HV_on_off.append(coil.control_voltage(voltage, max_voltage))
+				self.HV_2_CB(HV_on_off)
+
+				self.logger.info(f"Voltages are: {voltages}V")
+				self.logger.debug(f"HV that are on are: {HV_on_off}")
+		except KeyboardInterrupt:
+			pass
+		finally:
+			self.MAIN_HV_OFF()
+			self.HV_2_CB([False] * len(self))
+
+		self.logger.info("Coilgun is ready to FIRE!")
 
 	def shutdown(self):
 		"""Cleanup"""
-		print("Shutting down coilgun...")
-		self.HV_OFF()
-		self.DRAIN_CB()
+		self.logger.debug("Shutting down coilgun...")
+		self.OFF()
 		self.arduino.close()
-		self.potentiometer.close()
 		GPIO.cleanup()
-		print("Shutdown sucessfull!")
+		self.logger.debug("Shutdown sucessfull!")
 
 	def __len__(self) -> int:
 		"""Get length of the coilgun (number of coils)"""
