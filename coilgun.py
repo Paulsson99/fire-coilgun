@@ -17,8 +17,8 @@ class Coil:
 	):
 		self.capacitance = capacitance
 
-		self.R = R
-		self.R_pot = R_pot
+		self.R1 = R1
+		self.R2 = R2
 
 		# Is ready
 		self.READY = False
@@ -153,42 +153,52 @@ class Coilgun:
 
 	def MAIN_HV_ON(self):
 		"""Turn on HIGH VOLTAGE"""
-		self.arduino.send("ON")
+		self.arduino.send(Arduino.ON)
 		response = self.arduino.read()
 		if not response == Arduino.HV_ON:
-			self.logger.warning(f"Arduino did not turn on main HV correctly")
-			raise CommunicationError("Arduino did not turn on main HV correctly")
+			self.logger.warning(f"Arduino did not turn on main HV correctly. Responded with: '{response}")
+			raise CommunicationError(f"Arduino did not turn on main HV correctly. Responded with: '{response}")
 		self.logger.debug(f"Main HV turned on")
 
 	def MAIN_HV_OFF(self):
 		"""Turn off HIGH VOLTAGE"""
-		self.arduino.send("OFF")
+		self.arduino.send(Arduino.OFF)
 		response = self.arduino.read()
-		if not response == Arduino.OV_OFF:
-			self.logger.critical(f"Arduino did not turn off main HV correctly")
-			raise CommunicationError("Arduino did not turn off main HV correctly")
+		if not response == Arduino.HV_OFF:
+			self.logger.critical(f"Arduino did not turn off main HV correctly. Responded with: '{response}'")
+			raise CommunicationError(f"Arduino did not turn off main HV correctly. Responded with: '{response}'")
 		self.logger.debug(f"Main HV turned off")
 
 	def DRAIN_CB(self, CBs_to_drain: list[bool]):
 		"""Drain all CBs"""
-		message = ''.join(['1' for CB in CBs_to_drain if CB else '0'])
+		# This is flipped because the relay is NC
+		CBs_to_drain = [not CB for CB in CBs_to_drain]
+		message = self.convert_bool_list_to_Arduino_message(CBs_to_drain)
 		self.logger.debug(f"Draining command: {message}")
+
+		# Send command and message
+		self.arduino.send(Arduino.DRAIN)
+		self.arduino.send(message)
 
 		response = self.arduino.read()
 		if not Arduino.DRAIN_RESPONSE in response:
-			self.logger.critical(f"Arduino did not drain CBs correctly")
-			raise CommunicationError("Arduino did not drain CBs correctly")
+			self.logger.critical(f"Arduino did not drain CBs correctly. Responded with: '{response}'")
+			raise CommunicationError(f"Arduino did not drain CBs correctly. Responded with: '{response}'")
 		self.logger.debug(f"CBs drained")
 
 	def HV_2_CB(self, HV_states: list[bool]):
 		"""Turn HV ON/OFF"""
-		message = ''.join(['1' for CB in HV_states if CB else '0'])
+		message = self.convert_bool_list_to_Arduino_message(HV_states)
 		self.logger.debug(f"HV command: {message}")
 
+		# Send command and message
+		self.arduino.send(Arduino.HV)
+		self.arduino.send(message)
+
 		response = self.arduino.read()
-		if not Arduino.DRAIN_RESPONSE in response:
-			self.logger.critical(f"Arduino did not set HV to CBs correctly")
-			raise CommunicationError("Arduino did not set HV to CBs correctly")
+		if not Arduino.HV_RESPONSE in response:
+			self.logger.critical(f"Arduino did not set HV to CBs correctly. Responded with: '{response}'")
+			raise CommunicationError(f"Arduino did not set HV to CBs correctly. Responded with: '{response}'")
 		self.logger.debug(f"HV set")
 
 	def CHARGE_COILGUN(self, max_voltages: list[float]):
@@ -217,6 +227,10 @@ class Coilgun:
 
 		self.logger.info("Coilgun is ready to FIRE!")
 
+	def convert_bool_list_to_Arduino_message(self, bool_list) -> str:
+		"""Convert a list of booleans to a message the Arduino can read"""
+		return ''.join(['1' if CB else '0' for CB in bool_list])
+
 	def shutdown(self):
 		"""Cleanup"""
 		self.logger.debug("Shutting down coilgun...")
@@ -228,6 +242,10 @@ class Coilgun:
 	def __len__(self) -> int:
 		"""Get length of the coilgun (number of coils)"""
 		return len(self.coils)
+
+	def __iter__(self):
+		"""Iterate over the coils in the coilgun"""
+		return iter(self.coils)
 
 
 

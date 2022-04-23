@@ -1,4 +1,3 @@
-import spidev
 import serial
 import time
 
@@ -18,7 +17,7 @@ class Arduino:
 	# Expected responses
 	OK = "OK"			# A good test
 	HV_ON = "HV ON"		# HV sucessfully turned on
-	HV_OFF = "HV_OFF"	# HV sucessfully turned off
+	HV_OFF = "HV OFF"	# HV sucessfully turned off
 	DRAIN_RESPONSE = "Drain pins set to: "
 	HV_RESPONSE = "HV pins set to: "
 
@@ -36,7 +35,7 @@ class Arduino:
 
 	def send(self, message: str):
 		"""Send a message to the Arduino"""
-		self.arduino.write(bytes(message, 'utf-8'))
+		self.arduino.write(bytes(message + Arduino.END, 'utf-8'))
 
 	def read(self) -> str:
 		"""Read a response from the Arduino"""

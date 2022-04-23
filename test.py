@@ -1,10 +1,20 @@
-from communication import Arduino, Potentiometer
+from communication import Arduino
 from coilgun import Coil, Coilgun
 import config
 import yaml
 import time
-from utils import print_data
-import RPi.GPIO as GPIO
+import logging
+
+
+def test_decorator(func):
+	def test_wrapper(*args, **kwargs):
+		print(f"Testing {func.__name__[5:]}. Go to the next test by pressing ctrl+C")
+		try:
+			while True:
+				func(*args, **kwargs)
+		except KeyboardInterrupt:
+			pass
+	return test_wrapper
 
 
 def test_coilgun():
@@ -16,8 +26,6 @@ def test_coilgun():
 		print("Quiting...")
 	print("Communication sucessfull!")
 
-	potentiometer = Potentiometer()
-
 	with open("coils.yaml", "r") as yaml_file:
 		coils_dict = yaml.safe_load(yaml_file)
 
@@ -25,32 +33,81 @@ def test_coilgun():
 
 	coils = [Coil.from_dict(coils_dict[coil]) for coil in sorted_coils]
 
+	# Create a logger
+	logger = logging.getLogger('Coilgun')
+	# Add console logging to the logger
+	c_handler = logging.StreamHandler()
+	c_handler.setLevel(logging.DEBUG)
+	c_format = logging.Formatter('%(name)s : %(levelname)s : %(message)s')
+	c_handler.setFormatter(c_format)
+	logger.addHandler(c_handler)
+	logger.setLevel(logging.DEBUG)
+
 	
-	coilgun = Coilgun(coils[:1], arduino, potentiometer, config.HV_pin, config.drain_pin, config.projectile_diameter)
+	coilgun = Coilgun(coils, arduino, config.projectile_diameter, logger=logger)
 	
-	while True:
-		coilgun.HV_OFF()
-		print("DRAIN")
-		time.sleep(3)
-		print("CHARGE")
-		coilgun.HV_ON()
-		time.sleep(3)
+	coilgun.MAIN_HV_ON()
+	coilgun.DRAIN_CB([False])
+	coilgun.HV_2_CB([True])
 
+	input("Continue: y/n")
 
+	coilgun.MAIN_HV_OFF()
+	coilgun.DRAIN_CB([True])
+	coilgun.HV_2_CB([False])
 
-def test_pot():
-	potentiometer = Potentiometer()
-	pin = 13
-	
-	GPIO.setup(pin, GPIO.OUT)
+	quit()
 
-	# Pull selector pin LOW before transfering data
-	GPIO.output(pin, GPIO.LOW)
-	potentiometer.set(250)
-	GPIO.output(pin, GPIO.HIGH)
+	test_MAIN_HV(coilgun)
+	for coil in coilgun:
+		test_DRAIN(coilgun, coil)
+	for coil in coilgun:
+		test_HV(coilgun, coil)
+	test_READ_VOLTAGE(coilgun)
+	test_FIRE(coilgun)
 
-	GPIO.cleanup()
+@test_decorator
+def test_MAIN_HV(coilgun: Coilgun):
+	"""Test turning main HV ON/OFF"""
+	coilgun.MAIN_HV_ON()
+	time.sleep(1)
+	coilgun.MAIN_HV_OFF()
+	time.sleep(1)
 
+@test_decorator
+def test_DRAIN(coilgun: Coilgun, coil: Coil):
+	"""Test turning ON/OFF the drain for a coil"""
+	coils_to_turn_ON_OFF = [False] * len(coilgun)
+	coils_to_turn_ON_OFF[coil.id] = True
+
+	coilgun.DRAIN_CB(coils_to_turn_ON_OFF)
+	time.sleep(1)
+	coilgun.DRAIN_CB([not ON_OFF for ON_OFF in coils_to_turn_ON_OFF])
+	time.sleep(1)
+
+@test_decorator
+def test_HV(coilgun: Coilgun, coil: Coil):
+	"""Test turning ON/OFF the HV for a coil"""
+	coils_to_turn_ON_OFF = [False] * len(coilgun)
+	coils_to_turn_ON_OFF[coil.id] = True
+
+	coilgun.HV_2_CB(coils_to_turn_ON_OFF)
+	time.sleep(1)
+
+	coilgun.HV_2_CB([not ON_OFF for ON_OFF in coils_to_turn_ON_OFF])
+	time.sleep(1)
+
+@test_decorator
+def test_READ_VOLTAGE(coilgun: Coilgun):
+	"""Test reading the voltage for all the coils"""
+	print(coilgun.READ_VOLTAGES())
+	time.sleep(1)
+
+@test_decorator
+def test_FIRE(coilgun: Coilgun):
+	"""Test firering the coilgun"""
+	print(coilgun.FIRE())
+	time.sleep(1)
 
 if __name__ == '__main__':
 	test_coilgun()
