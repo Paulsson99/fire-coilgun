@@ -45,18 +45,11 @@ def test_coilgun():
 
 	
 	coilgun = Coilgun(coils, arduino, config.projectile_diameter, logger=logger)
-	
-	coilgun.MAIN_HV_ON()
-	coilgun.DRAIN_CB([False])
-	coilgun.HV_2_CB([True])
 
-	input("Continue: y/n")
 
-	coilgun.MAIN_HV_OFF()
-	coilgun.DRAIN_CB([True])
-	coilgun.HV_2_CB([False])
-
-	quit()
+	# coilgun.CHARGE_COILGUN([150])
+	# coilgun.FIRE()
+	# test_FIRE(coilgun)
 
 	test_MAIN_HV(coilgun)
 	for coil in coilgun:
@@ -65,6 +58,8 @@ def test_coilgun():
 		test_HV(coilgun, coil)
 	test_READ_VOLTAGE(coilgun)
 	test_FIRE(coilgun)
+
+	coilgun.shutdown()
 
 @test_decorator
 def test_MAIN_HV(coilgun: Coilgun):
@@ -77,12 +72,12 @@ def test_MAIN_HV(coilgun: Coilgun):
 @test_decorator
 def test_DRAIN(coilgun: Coilgun, coil: Coil):
 	"""Test turning ON/OFF the drain for a coil"""
-	coils_to_turn_ON_OFF = [False] * len(coilgun)
-	coils_to_turn_ON_OFF[coil.id] = True
+	coils_to_turn_ON_OFF = [True] * len(coilgun)
+	coils_to_turn_ON_OFF[coil.id] = False
 
 	coilgun.DRAIN_CB(coils_to_turn_ON_OFF)
 	time.sleep(1)
-	coilgun.DRAIN_CB([not ON_OFF for ON_OFF in coils_to_turn_ON_OFF])
+	coilgun.DRAIN_ALL(True)
 	time.sleep(1)
 
 @test_decorator
@@ -94,7 +89,7 @@ def test_HV(coilgun: Coilgun, coil: Coil):
 	coilgun.HV_2_CB(coils_to_turn_ON_OFF)
 	time.sleep(1)
 
-	coilgun.HV_2_CB([not ON_OFF for ON_OFF in coils_to_turn_ON_OFF])
+	coilgun.HV_ALL(False)
 	time.sleep(1)
 
 @test_decorator

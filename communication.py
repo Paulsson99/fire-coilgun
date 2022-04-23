@@ -1,4 +1,5 @@
 import serial
+import serial.tools.list_ports
 import time
 
 
@@ -13,6 +14,7 @@ class Arduino:
 	HV = "HV"
 	DRAIN = "DRAIN"
 	TEST = "TEST"
+	ABORT = "ABORT"
 
 	# Expected responses
 	OK = "OK"			# A good test
@@ -20,6 +22,7 @@ class Arduino:
 	HV_OFF = "HV OFF"	# HV sucessfully turned off
 	DRAIN_RESPONSE = "Drain pins set to: "
 	HV_RESPONSE = "HV pins set to: "
+	ABORT_RESPONSE = "ABORTING"
 
 	# Communication chars
 	END = '\n'
@@ -60,13 +63,23 @@ class Arduino:
 
 	def connect(self) -> bool:
 		"""Connect to the Arduino"""
-		self.arduino = serial.Serial(port=self.port, baudrate=self.baudrate, timeout=self.timeout)
-		self.arduino.flush()
+		try:
+			self.arduino = serial.Serial(port=self.port, baudrate=self.baudrate, timeout=self.timeout)
+		except serial.SerialException:
+			print(f"Could not connect to port {self.port} as it does not exist or it is busy. Try one of these instead:")
+			print('\n'.join([comport.device for comport in serial.tools.list_ports.comports()]))
+			quit()
+		self.flush_serial()
 		time.sleep(1)
 		if not self.test_connection():
 			self.close()
 			return False
 		return True
+
+	def flush_serial(self):
+		"""Clear Serial buffer"""
+		self.arduino.reset_input_buffer()
+		self.arduino.reset_output_buffer()
 
 	def close(self):
 		"""Close connection to the Arduino"""

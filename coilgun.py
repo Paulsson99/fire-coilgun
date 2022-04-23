@@ -60,10 +60,15 @@ class Coil:
 		Control the voltage for the coil. 
 		Return true if it needs more voltage, False otherwise
 		"""
+		# if voltage < max_voltage:
+		# 	return True
+		# else:
+		# 	self.READY = False
+		# 	return False
 		if self.READY:
-			return True
+			return False
 		self.READY = voltage > max_voltage
-		return (voltages < max_voltage) or self.READY
+		return (voltage < max_voltage) or self.READY
 
 	def reset(self):
 		"""Reset the coil"""
@@ -108,14 +113,21 @@ class Coilgun:
 		"""Reset the coilgun"""
 		self.MAIN_HV_OFF()
 		# Drain and turn off HV to all CBs
-		self.DRAIN_CB([True] * len(self))
-		self.HV_2_CB([False] * len(self))
+		self.DRAIN_ALL(True)
+		self.HV_ALL(False)
 
 		for coil in self.coils:
 			coil.reset()
 
 		# Logging
 		self.logger.debug("Coilgun was turned off")
+
+	def ON(self):
+		self.MAIN_HV_ON()
+		self.DRAIN_ALL(False)
+		self.HV_ALL(True)
+		# Logging
+		self.logger.debug("Coilgun was turned on")
 
 	def READ_VOLTAGES(self):
 		"""Read all voltages for all CBs"""
@@ -186,6 +198,10 @@ class Coilgun:
 			raise CommunicationError(f"Arduino did not drain CBs correctly. Responded with: '{response}'")
 		self.logger.debug(f"CBs drained")
 
+	def DRAIN_ALL(self, drain: bool = True):
+		"""Drain or don't drain all CBs depending on the variable 'drain'"""
+		self.DRAIN_CB([drain] * len(self))
+
 	def HV_2_CB(self, HV_states: list[bool]):
 		"""Turn HV ON/OFF"""
 		message = self.convert_bool_list_to_Arduino_message(HV_states)
@@ -201,17 +217,21 @@ class Coilgun:
 			raise CommunicationError(f"Arduino did not set HV to CBs correctly. Responded with: '{response}'")
 		self.logger.debug(f"HV set")
 
+	def HV_ALL(self, HV_state: bool = False):
+		"""Turn HV ON/OFF for all coils depending on the variable 'HV_state'"""
+		self.HV_2_CB([HV_state] * len(self))
+
 	def CHARGE_COILGUN(self, max_voltages: list[float]):
 		"""Charge the coilgun"""
 		self.DRAIN_CB([False] * len(self))
 		self.HV_2_CB([True] * len(self))
 		self.MAIN_HV_ON()
 
-		self.logger.info(f"Charging coilgun to {voltages}V")
+		self.logger.info(f"Charging coilgun to {max_voltages}V")
 
 		try:
 			while not self.READY_2_FIRE():
-				voltages = self.read_voltages()
+				voltages = self.READ_VOLTAGES()
 				HV_on_off = []
 				for coil, voltage, max_voltage in zip(self.coils, voltages, max_voltages):
 					HV_on_off.append(coil.control_voltage(voltage, max_voltage))
@@ -220,12 +240,28 @@ class Coilgun:
 				self.logger.info(f"Voltages are: {voltages}V")
 				self.logger.debug(f"HV that are on are: {HV_on_off}")
 		except KeyboardInterrupt:
-			pass
+			self.logger.info(f"Charge of coilgun was stopped manually at: {voltages}V")
+			self.ABORT()
 		finally:
+			self.HV_ALL(False)
 			self.MAIN_HV_OFF()
-			self.HV_2_CB([False] * len(self))
 
 		self.logger.info("Coilgun is ready to FIRE!")
+
+	def ABORT(self):
+		"""Abort command execution on Arduino"""
+		time.sleep(0.01)
+		self.arduino.flush_serial()
+		self.arduino.send(Arduino.ABORT)
+		response = self.arduino.read()
+
+		self.logger.debug("Aborting execution off command on Arduino")
+
+		if not response == Arduino.ABORT_RESPONSE:
+			self.logger.critical(f"Arduino did not abort correctly. Responded with: '{response}'")
+			raise CommunicationError(f"Arduino did not abort correctly. Responded with: '{response}'")
+
+		
 
 	def convert_bool_list_to_Arduino_message(self, bool_list) -> str:
 		"""Convert a list of booleans to a message the Arduino can read"""
@@ -233,11 +269,11 @@ class Coilgun:
 
 	def shutdown(self):
 		"""Cleanup"""
-		self.logger.debug("Shutting down coilgun...")
+		self.ABORT
+		self.logger.info("Shutting down coilgun...")
 		self.OFF()
 		self.arduino.close()
-		GPIO.cleanup()
-		self.logger.debug("Shutdown sucessfull!")
+		self.logger.info("Shutdown sucessfull!")
 
 	def __len__(self) -> int:
 		"""Get length of the coilgun (number of coils)"""

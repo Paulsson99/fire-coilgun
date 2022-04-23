@@ -1,13 +1,13 @@
-#define COILS 1
+#define COILS 2
 #define SEP ','
 #define END '\n'
 
-int fire_pins[COILS] = {11};
-int sensor_pins[COILS] = {1};
-int voltage_pins[COILS] = {A5};
-int drain_pins[COILS] = {13};
-int HV_pins[COILS] = {12};
-int MAIN_HV_PIN = 10;
+int fire_pins[COILS] = {9, 8};
+int sensor_pins[COILS] = {6, 7};
+int voltage_pins[COILS] = {A5, A4};
+int drain_pins[COILS] = {13, 12};
+int HV_pins[COILS] = {11, 10};
+int MAIN_HV_PIN = 3;
 
 void setup() {
   // Setup all the pins
@@ -49,6 +49,9 @@ void loop() {
   else if (command == "DRAIN") {
     Drain();
   }
+  else if (command == "ABORT") {
+    PrintSerial("ABORTING");
+  }
   else if (command == "TEST") {
     PrintSerial("OK");
   }
@@ -60,6 +63,9 @@ void loop() {
 String ReadSerial() {
   while (Serial.available() == 0) {
     // Wait for command from the RP
+    // Serial.print(digitalRead(sensor_pins[0]));
+    // Serial.print(", ");
+    // Serial.println(digitalRead(sensor_pins[1]));
   }
 
   return Serial.readStringUntil(END);
@@ -97,7 +103,7 @@ void Fire() {
   // Fire the coils and read there velocity (blocking time)
   for (int i = 0; i < COILS; i++) {
     digitalWrite(fire_pins[i], HIGH);
-    blocking_times[i] = pulseIn(sensor_pins[i], LOW, 10000);
+    blocking_times[i] = pulseIn(sensor_pins[i], LOW, 1000000);
   }
 
   // Reset all the pins
@@ -112,7 +118,11 @@ void ReadVoltage() {
   unsigned long voltages[COILS];
 
   for (int i = 0; i < COILS; i++) {
-    voltages[i] = (unsigned long) analogRead(voltage_pins[i]);
+    int average_voltage = 0;
+    for (int j = 0; j < 4; j++) {
+      average_voltage += analogRead(voltage_pins[i]);
+    }
+    voltages[i] = (unsigned long) (average_voltage / 4);
   }
 
   SendData(voltages, COILS);
@@ -135,7 +145,12 @@ void Drain() {
 }
 
 void SetPins(int pins[], String pin_states, int nb_pins) {
-  for (int i = 0; i < nb_pins; i++) {
-    digitalWrite(pins[i], pin_states[i] == '1');
+  if (pin_states != "ABORT") {
+    for (int i = 0; i < nb_pins; i++) {
+      digitalWrite(pins[i], pin_states[i] == '1');
+    }
+  }
+  else {
+    PrintSerial("ABORTING");
   }
 }
