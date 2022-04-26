@@ -14,6 +14,7 @@ class Coil:
 		capacitance: float,			# Total capacitance in the capacitance bank [F]
 		R1: float, 					# First resistance in the voltage divider
 		R2: float, 					# Second resistance in the voltage divider
+		ON: bool 					# Is the coil on?
 	):
 		self.capacitance = capacitance
 
@@ -22,6 +23,8 @@ class Coil:
 
 		# Is ready
 		self.READY = False
+
+		self.ON = ON
 
 		# Set a unique ID
 		self.id = Coil.TOTAL
@@ -65,7 +68,7 @@ class Coil:
 		# else:
 		# 	self.READY = False
 		# 	return False
-		if self.READY:
+		if self.READY or not self.ON:
 			return False
 		self.READY = voltage > max_voltage
 		return (voltage < max_voltage) or self.READY
@@ -84,6 +87,10 @@ class Coil:
 	def CB_energy(self, voltage):
 		"""Calculate energy in the CB for voltage"""
 		return self.capacitance * voltage**2 / 2
+
+	def turn_on(self):
+		"""Turn on the coil"""
+		self.ON = True
 
 	def reset(self):
 		"""Reset the coil"""
@@ -139,7 +146,12 @@ class Coilgun:
 		# Logging
 		self.logger.debug("Coilgun was turned off")
 
-	def ON(self):
+	def ON(self, coils_to_turn_on: list[bool]):
+		for coil, coil_on in zip(self, coils_to_turn_on):
+			# Turn on the coils (impossible to charge otherwise)
+			if coil_on:
+				coil.turn_on()
+
 		self.MAIN_HV_ON()
 		self.DRAIN_ALL(False)
 		self.HV_ALL(True)
@@ -204,7 +216,8 @@ class Coilgun:
 	def DRAIN_CB(self, CBs_to_drain: list[bool]):
 		"""Drain all CBs"""
 		# This is flipped because the relay is NC
-		CBs_to_drain = [not CB for CB in CBs_to_drain]
+		# Only 
+		CBs_to_drain = [(not CB) and (not coil.ON) for CB, coil in zip(CBs_to_drain, self)]
 		message = self.convert_bool_list_to_Arduino_message(CBs_to_drain)
 		self.logger.debug(f"Draining command: {message}")
 
@@ -224,6 +237,8 @@ class Coilgun:
 
 	def HV_2_CB(self, HV_states: list[bool]):
 		"""Turn HV ON/OFF"""
+		# Only allow HV to be turned on for a coil that is ON
+		HV_states = [HV_state and coil.ON for zip(HV_states, self)]
 		message = self.convert_bool_list_to_Arduino_message(HV_states)
 		self.logger.debug(f"HV command: {message}")
 
