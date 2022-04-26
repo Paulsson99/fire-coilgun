@@ -19,7 +19,7 @@ int HV_pins[COILS];
 
 void setup() {
   // Setup all the pins
-  for(int i=-1; i < COILS; i++) {
+  for(int i=0; i < COILS ; i++) {
     fire_pins[i] = all_fire_pins[i];
     sensor_pins[i] = all_sensor_pins[i];
     voltage_pins[i] = all_voltage_pins[i];
@@ -27,17 +27,17 @@ void setup() {
     HV_pins[i] = all_HV_pins[i]; 
   }
   
-  for (int i = 0; i < COILS; i++) {
-    pinMode(fire_pins[i], OUTPUT);
-    pinMode(sensor_pins[i], INPUT);
-    pinMode(voltage_pins[i], INPUT);
-    pinMode(drain_pins[i], OUTPUT);
-    pinMode(HV_pins[i], OUTPUT);
+  for (int i = 0; i < 8; i++) {
+    pinMode(all_fire_pins[i], OUTPUT);
+    pinMode(all_sensor_pins[i], INPUT);
+    pinMode(all_voltage_pins[i], INPUT);
+    pinMode(all_drain_pins[i], OUTPUT);
+    pinMode(all_HV_pins[i], OUTPUT);
+    digitalWrite(all_fire_pins[i], LOW);
 
-    digitalWrite(fire_pins[i], LOW);
   }
   pinMode(MAIN_HV_PIN, OUTPUT);
-
+  SetPins(all_HV_pins, "00000000", 8);
   // Begin serial communication
   Serial.begin(115200);
 }

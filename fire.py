@@ -13,9 +13,9 @@ import os
 
 # For logging of a shot
 # Number of windings on a coil
-windings = [150, 100, 100, 100, 100, 100, 100, 100]
+windings = [150,0,0,0,0,0,0,0]
 # Position relative sensor [mm] (end of sensor to start of coil)
-positions = [23, 1, 1, 1, 1, 1, 1, 1]
+positions = [23,0,0,0,0,0,0,0]
 
 
 def get_voltages(coils: int):
@@ -144,13 +144,15 @@ def fire(coilgun: Coilgun):
 
 def log_shot(filename, voltages, velocities, efficiencies, trigger_times):
 	"""Log a shot"""
+	
+	
 	data = {
-		'Velocities [m/s]': velocities,
-		'Voltages [V]': voltages,
-		'Efficiency [%]': efficiencies * 100,
-		'Windings [-]': windings,
-		'Positions [mm]': positions,
-		'Trigger times [s]': trigger_times
+		'Velocities [m/s]': np.resize(velocities,8),
+		'Voltages [V]': np.resize(voltages,8),
+		'Efficiency [%]': np.resize(efficiencies * 100,8),
+		'Windings [-]': np.resize(windings,8),
+		'Positions [mm]': np.resize(positions,8),
+		'Trigger times [s]': np.resize(trigger_times,8)
 	}
 	df = pd.DataFrame(data=data)
 
