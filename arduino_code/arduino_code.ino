@@ -1,13 +1,13 @@
-#define COILS 2
+#define COILS 7
 #define SEP ','
 #define END '\n'
 
-int fire_pins[COILS] = {9, 8};
-int sensor_pins[COILS] = {6, 7};
-int voltage_pins[COILS] = {A5, A4};
-int drain_pins[COILS] = {13, 12};
-int HV_pins[COILS] = {11, 10};
-int MAIN_HV_PIN = 3;
+int fire_pins[COILS] = {29, 33, 37, 41, 45, 49, 53};
+int sensor_pins[COILS] = {27, 31, 23, 51, 47, 43, 35};
+int voltage_pins[COILS] = {A6, A5, A4, A3, A2, A1, A0};
+int drain_pins[COILS] = {28, 32, 36, 40, 44, 48, 52};
+int HV_pins[COILS] = {26, 30, 34, 38, 42, 46, 50};
+int MAIN_HV_PIN = 13;
 
 void setup() {
   // Setup all the pins
@@ -48,6 +48,9 @@ void loop() {
   }
   else if (command == "DRAIN") {
     Drain();
+  }
+  else if (command == "SENSORS") {
+    ReadSensors();
   }
   else if (command == "ABORT") {
     PrintSerial("ABORTING");
@@ -99,11 +102,15 @@ void OFF() {
 
 void Fire() {
   unsigned long blocking_times[COILS];
+  unsigned long trigger_time[COILS];
+  unsigned long start_time = micros();
 
   // Fire the coils and read there velocity (blocking time)
   for (int i = 0; i < COILS; i++) {
     digitalWrite(fire_pins[i], HIGH);
-    blocking_times[i] = pulseIn(sensor_pins[i], LOW, 1000000);
+    delayMicroseconds(100);
+    blocking_times[i] = pulseIn(sensor_pins[i], LOW, 100000);
+    trigger_time[i] = micros() - start_time;
   }
 
   // Reset all the pins
@@ -112,6 +119,7 @@ void Fire() {
   }
 
   SendData(blocking_times, COILS);
+  SendData(trigger_time, COILS);
 }
 
 void ReadVoltage() {
@@ -142,6 +150,14 @@ void Drain() {
   String drain_command = ReadSerial();
   SetPins(drain_pins, drain_command, COILS);
   PrintSerial("Drain pins set to: " + drain_command);
+}
+
+void ReadSensors() {
+  unsigned long states[COILS];
+  for (int i = 0; i < COILS; i++) {
+    states[i] = digitalRead(sensor_pins[i]);
+  }
+  SendData(states, COILS);
 }
 
 void SetPins(int pins[], String pin_states, int nb_pins) {

@@ -7,6 +7,15 @@ from utils import print_data
 import logging
 
 import numpy as np
+import pandas as pd
+from datetime import datetime
+import os
+
+# For logging of a shot
+# Number of windings on a coil
+windings = [100, 100, 100, 100, 100, 100, 100]
+# Position relative sensor [mm] (end of sensor to start of coil)
+positions = [1, 1, 1, 1, 1, 1, 1]
 
 
 def get_voltages(coils: int):
@@ -27,7 +36,12 @@ def get_voltages(coils: int):
 def manual_fire(coilgun: Coilgun):
 	"""Fire the coilgun manualy"""
 	coilgun.ON()
-	input("Charge the coils to the desired voltage. Then press enter to FIRE!")
+	try: 
+		while True:
+			time.sleep(1)
+			print_data(coilgun.READ_VOLTAGES(), units='V')
+	except KeyboardInterrupt:
+		pass
 	# Countdown
 	for i in range(3):
 		time.sleep(1)
@@ -36,9 +50,23 @@ def manual_fire(coilgun: Coilgun):
 	print("FIRE!!!")
 
 	fire_voltages = np.array(coilgun.READ_VOLTAGES())
-	velocities = coilgun.FIRE()
+	velocities, trigger_times = coilgun.FIRE()
 
+	coil_efficiency, total_efficiency = coilgun.efficiency(fire_voltages, velocities)
+	coil_efficiency = np.array(coil_efficiency)
+
+	print_data(fire_voltages, units='V', prefix='Coilgun fired at: ')
 	print_data(velocities, units='m/s', prefix='Projectile velocity was: ')
+	print_data(coil_efficiency*100, units=r'%', prefix="Efficiency for all the coils was: ")
+	print(f"Total efficiency was {total_efficiency*100:.2f}%")
+
+	log_shot(
+		filename=config.data_logging_path,
+		voltages=fire_voltages, 
+		velocities=velocities, 
+		efficiencies=total_efficiency,
+		trigger_times=trigger_times
+	)
 
 	time.sleep(1)
 	after_fire_voltages = np.array(coilgun.READ_VOLTAGES())
@@ -46,13 +74,18 @@ def manual_fire(coilgun: Coilgun):
 	# Drain all CBs that are safe to drain
 	coilgun.DRAIN_CB(after_fire_voltages < coilgun.MAX_VOLTAGE_FOR_SAFE_DRAIN)
 
-	if np.any(after_fire_voltages > coilgun.MAX_VOLTAGE_FOR_SAFE_DRAIN):
+	time.sleep(1)
+	after_drain_voltages = np.array(coilgun.READ_VOLTAGES())
+
+	if np.any(after_drain_voltages > coilgun.MAX_VOLTAGE_FOR_SAFE_DRAIN):
 		print("Warning!!! Not all CBs are empty!")
-		print_data(after_fire_voltages, units='V', prefix="The voltages are: ")
+		print_data(after_drain_voltages, units='V', prefix="The voltages are: ")
 		if input("Empty CBs anyway (y/n): ") == 'y':
-			coilgun.DRAIN_CB()
+			coilgun.DRAIN_ALL(True)
 		else:
-			coilgun.fire()
+			print_data(after_drain_voltages, units='V', prefix="Fire with coilgun at: ")
+			input("FIRE!!!")
+			coilgun.FIRE()
 			quit()
 	
 	coilgun.OFF()
@@ -100,13 +133,27 @@ def fire(coilgun: Coilgun):
 		print("Warning!!! Not all CBs are empty!")
 		print_data(after_fire_voltages, units='V', prefix="The voltages are: ")
 		if input("Empty CBs anyway (y/n): ") == 'y':
-			coilgun.DRAIN_CB()
+			coilgun.DRAIN_ALL(True)
 		else:
-			coilgun.fire()
+			coilgun.FIRE()
 			quit()
 	
 	coilgun.OFF()
 
+
+def log_shot(filename, voltages, velocities, efficiencies, trigger_times):
+	"""Log a shot"""
+	data = {
+		'Velocities [m/s]': velocities,
+		'Voltages [V]': voltages,
+		'Efficiency [%]': efficiencies * 100,
+		'Windings [-]': windings,
+		'Positions [mm]': positions,
+		'Trigger times [s]': trigger_times
+	}
+	df = pd.DataFrame(data=data)
+
+	df.to_csv(filename + "_" + datetime.now().strftime('%d-%m-%Y %H-%M-%S') + '.csv', mode='w', header=True)
 
 def main():
 	# Start communication with the Arduino
@@ -142,7 +189,7 @@ def main():
 	f_handler.setFormatter(f_format)
 	logger.addHandler(f_handler)
 
-	coilgun = Coilgun(coils, arduino, config.projectile_diameter, logger=logger)
+	coilgun = Coilgun(coils, arduino, config.projectile_diameter, config.projectile_mass, logger=logger)
 
 	try:
 		while True:

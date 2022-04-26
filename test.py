@@ -4,6 +4,7 @@ import config
 import yaml
 import time
 import logging
+from utils import print_data
 
 
 def test_decorator(func):
@@ -44,12 +45,29 @@ def test_coilgun():
 	logger.setLevel(logging.DEBUG)
 
 	
-	coilgun = Coilgun(coils, arduino, config.projectile_diameter, logger=logger)
+	coilgun = Coilgun(coils, arduino, config.projectile_diameter, config.projectile_mass, logger=logger)
 
 
 	# coilgun.CHARGE_COILGUN([150])
 	# coilgun.FIRE()
 	# test_FIRE(coilgun)
+
+	# coilgun.ON()
+	# try: 
+	# 	while True:
+	# 		time.sleep(1)
+	# 		print_data(coilgun.READ_VOLTAGES(), units='V')
+	# except KeyboardInterrupt:
+	# 	pass
+
+	# coilgun.DRAIN_ALL(True)
+
+	# try: 
+	# 	while True:
+	# 		time.sleep(1)
+	# 		print_data(coilgun.READ_VOLTAGES(), units='V')
+	# except KeyboardInterrupt:
+	# 	pass
 
 	test_MAIN_HV(coilgun)
 	for coil in coilgun:
@@ -58,6 +76,7 @@ def test_coilgun():
 		test_HV(coilgun, coil)
 	test_READ_VOLTAGE(coilgun)
 	test_FIRE(coilgun)
+	test_SENSORS(coilgun)
 
 	coilgun.shutdown()
 
@@ -101,7 +120,15 @@ def test_READ_VOLTAGE(coilgun: Coilgun):
 @test_decorator
 def test_FIRE(coilgun: Coilgun):
 	"""Test firering the coilgun"""
-	print(coilgun.FIRE())
+	vel, trigger = coilgun.FIRE()
+	print(vel)
+	print(trigger)
+	time.sleep(1)
+
+@test_decorator
+def test_SENSORS(coilgun: Coilgun):
+	"""Test the sensors"""
+	print(coilgun.SENSORS())
 	time.sleep(1)
 
 if __name__ == '__main__':

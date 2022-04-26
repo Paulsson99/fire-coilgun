@@ -130,3 +130,7 @@ dmypy.json
 
 # Log
 log.txt
+data_loggs/
+
+# Other
+.DS_Store

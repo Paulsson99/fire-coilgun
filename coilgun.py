@@ -70,6 +70,21 @@ class Coil:
 		self.READY = voltage > max_voltage
 		return (voltage < max_voltage) or self.READY
 
+	def efficiency(self, v1: float, v2: float, voltage: float, m: float) -> float:
+		"""
+		Calculate coil efficiency
+		v1: Projectile velocity before the coil
+		v2: Projectile velocity after the coil
+		voltage: Voltage in the CB
+		m: Projectile mass
+		"""
+		E_k = m * (v2**2 - v1**2) / 2
+		return E_k / self.CB_energy(voltage)
+
+	def CB_energy(self, voltage):
+		"""Calculate energy in the CB for voltage"""
+		return self.capacitance * voltage**2 / 2
+
 	def reset(self):
 		"""Reset the coil"""
 		self.READY = False
@@ -79,18 +94,20 @@ class Coil:
 class Coilgun:
 	"""Class for controling the coilgun"""
 
-	MAX_VOLTAGE_FOR_SAFE_DRAIN = 20
+	MAX_VOLTAGE_FOR_SAFE_DRAIN = 15
 
 	def __init__(
 		self, 
 		coils: list[Coil], 
 		arduino: Arduino, 
 		projectile_dimeter: float,
+		projectile_mass: float,
 		logger: logging.Logger = None
 	):
 		self.coils = coils
 		self.arduino = arduino
 		self.projectile_dimeter = projectile_dimeter
+		self.projectile_mass = projectile_mass
 
 		# Create a default logger
 		if logger is None:
@@ -147,14 +164,17 @@ class Coilgun:
 		self.arduino.send(Arduino.FIRE)
 		self.logger.debug(f"Coilgun fired")
 		blocking_times_us = self.arduino.read()
+		trigger_times_us = self.arduino.read()
 		self.logger.debug(f"Sensors were blocked for {blocking_times_us} us")
+		self.logger.debug(f"Sensors blocked at: {trigger_times_us} us")
 
 		# Calculate the projectile velocities at the sensors
 		blocking_times = np.array([int(t_us) * 1e-6 for t_us in blocking_times_us.split(Arduino.SEP)])
+		trigger_times = np.array([int(t_us) * 1e-6 for t_us in trigger_times_us.split(Arduino.SEP)])
 		velocities = self.projectile_dimeter / blocking_times
 		self.logger.debug(f"Calculated velocities for the projectile: {velocities}")
 
-		return velocities
+		return velocities, trigger_times
 
 	def READY_2_FIRE(self):
 		"""Check if the coilgun is ready to fire"""
@@ -248,6 +268,14 @@ class Coilgun:
 
 		self.logger.info("Coilgun is ready to FIRE!")
 
+	def SENSORS(self):
+		"""Get the state of all the sensors. (Only used for testing)"""
+		self.arduino.send(Arduino.SENSORS)
+		response = self.arduino.read()
+
+		self.logger.debug(f"Sensors values are: {response}")
+		return response
+
 	def ABORT(self):
 		"""Abort command execution on Arduino"""
 		time.sleep(0.01)
@@ -267,9 +295,24 @@ class Coilgun:
 		"""Convert a list of booleans to a message the Arduino can read"""
 		return ''.join(['1' if CB else '0' for CB in bool_list])
 
+	def efficiency(self, voltages: list[float], velocities: list[float]) -> list[float]:
+		"""Calculate coilgun efficiency"""
+		eta = []
+		coilgun_energy = 0
+		v_in = 0
+		for coil, v_out, voltage in zip(self, velocities, voltages):
+			eta.append(coil.efficiency(v_in, v_out, voltage, self.projectile_mass))
+			coilgun_energy += coil.CB_energy(voltage)
+			# Velocity in before the next coil is the velocity out for this coil
+			v_in = v_out
+		E_k = self.projectile_mass * velocities[-1]**2 / 2
+		return eta, E_k / coilgun_energy
+
+		
+
 	def shutdown(self):
 		"""Cleanup"""
-		self.ABORT
+		self.ABORT()
 		self.logger.info("Shutting down coilgun...")
 		self.OFF()
 		self.arduino.close()

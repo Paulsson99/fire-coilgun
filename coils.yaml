@@ -1,9 +1,34 @@
 coil1:
-  capacitance: 1600.e-6     # Total capacitance in the capacitance bank [F]
+  capacitance: 1067.e-6     # Total capacitance in the capacitance bank [F]
   R1: 22.e+6                # First resistance in the voltage divider
   R2: 82.e+3                # Second resistance in the voltage divider
 
 coil2:
-  capacitance: 1600.e-6     # Total capacitance in the capacitance bank [F]
+  capacitance: 1067.e-6     # Total capacitance in the capacitance bank [F]
   R1: 22.e+6                # First resistance in the voltage divider
-  R2: 100.e+3               # Second resistance in the voltage divider
+  R2: 82.e+3                # Second resistance in the voltage divider
+
+coil3:
+  capacitance: 1067.e-6     # Total capacitance in the capacitance bank [F]
+  R1: 22.e+6                # First resistance in the voltage divider
+  R2: 82.e+3               # Second resistance in the voltage divider
+
+coil4:
+  capacitance: 1067.e-6     # Total capacitance in the capacitance bank [F]
+  R1: 22.e+6                # First resistance in the voltage divider
+  R2: 82.e+3                # Second resistance in the voltage divider
+
+coil5:
+  capacitance: 1067.e-6     # Total capacitance in the capacitance bank [F]
+  R1: 22.e+6                # First resistance in the voltage divider
+  R2: 100.e+3                # Second resistance in the voltage divider
+
+coil6:
+  capacitance: 1067.e-6     # Total capacitance in the capacitance bank [F]
+  R1: 22.e+6                # First resistance in the voltage divider
+  R2: 82.e+3                # Second resistance in the voltage divider
+
+coil7:
+  capacitance: 1067.e-6     # Total capacitance in the capacitance bank [F]
+  R1: 22.e+6                # First resistance in the voltage divider
+  R2: 82.e+3                # Second resistance in the voltage divider

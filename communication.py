@@ -14,6 +14,7 @@ class Arduino:
 	HV = "HV"
 	DRAIN = "DRAIN"
 	TEST = "TEST"
+	SENSORS = "SENSORS"
 	ABORT = "ABORT"
 
 	# Expected responses
@@ -22,6 +23,7 @@ class Arduino:
 	HV_OFF = "HV OFF"	# HV sucessfully turned off
 	DRAIN_RESPONSE = "Drain pins set to: "
 	HV_RESPONSE = "HV pins set to: "
+	SENSOR_RESPONSE = "Sensors are: "
 	ABORT_RESPONSE = "ABORTING"
 
 	# Communication chars
