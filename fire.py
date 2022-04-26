@@ -38,8 +38,9 @@ def manual_fire(coilgun: Coilgun):
 	coilgun.ON()
 	try: 
 		while True:
-			time.sleep(1)
 			print_data(coilgun.READ_VOLTAGES(), units='V')
+			print("\033[A                                                         \033[A")
+			time.sleep(1)
 	except KeyboardInterrupt:
 		pass
 	# Countdown
