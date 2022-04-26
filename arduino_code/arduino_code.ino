@@ -1,16 +1,32 @@
-#define COILS 7
+#define COILS 8
 #define SEP ','
 #define END '\n'
 
-int fire_pins[COILS] = {29, 33, 37, 41, 45, 49, 53};
-int sensor_pins[COILS] = {27, 31, 23, 51, 47, 43, 35};
-int voltage_pins[COILS] = {A6, A5, A4, A3, A2, A1, A0};
-int drain_pins[COILS] = {28, 32, 36, 40, 44, 48, 52};
-int HV_pins[COILS] = {26, 30, 34, 38, 42, 46, 50};
+
+
+int all_fire_pins[8] = {25, 29, 33, 37, 41, 45, 49, 53};
+int all_sensor_pins[8] = {23, 27, 31, 23, 51, 47, 43, 35};
+int all_voltage_pins[8] = {A7, A6, A5, A4, A3, A2, A1, A0};
+int all_drain_pins[8] = {24, 28, 32, 36, 40, 44, 48, 52};
+int all_HV_pins[8] = {22, 26, 30, 34, 38, 42, 46, 50};
 int MAIN_HV_PIN = 13;
+int fire_pins[COILS];
+int sensor_pins[COILS];
+int voltage_pins[COILS];
+int drain_pins[COILS];
+int HV_pins[COILS];
+
 
 void setup() {
   // Setup all the pins
+  for(int i=-1; i < COILS; i++) {
+    fire_pins[i] = all_fire_pins[i];
+    sensor_pins[i] = all_sensor_pins[i];
+    voltage_pins[i] = all_voltage_pins[i];
+    drain_pins[i] = all_drain_pins[i];
+    HV_pins[i] = all_HV_pins[i]; 
+  }
+  
   for (int i = 0; i < COILS; i++) {
     pinMode(fire_pins[i], OUTPUT);
     pinMode(sensor_pins[i], INPUT);
@@ -108,7 +124,7 @@ void Fire() {
   // Fire the coils and read there velocity (blocking time)
   for (int i = 0; i < COILS; i++) {
     digitalWrite(fire_pins[i], HIGH);
-    delayMicroseconds(100);
+    delayMicroseconds(10);
     blocking_times[i] = pulseIn(sensor_pins[i], LOW, 100000);
     trigger_time[i] = micros() - start_time;
   }

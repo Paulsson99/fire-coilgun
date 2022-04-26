@@ -13,9 +13,9 @@ import os
 
 # For logging of a shot
 # Number of windings on a coil
-windings = [100, 100, 100, 100, 100, 100, 100]
+windings = [150, 100, 100, 100, 100, 100, 100, 100]
 # Position relative sensor [mm] (end of sensor to start of coil)
-positions = [1, 1, 1, 1, 1, 1, 1]
+positions = [23, 1, 1, 1, 1, 1, 1, 1]
 
 
 def get_voltages(coils: int):
@@ -39,8 +39,8 @@ def manual_fire(coilgun: Coilgun):
 	try: 
 		while True:
 			print_data(coilgun.READ_VOLTAGES(), units='V')
-			print("\033[A                                                         \033[A")
 			time.sleep(1)
+			print("\033[A                                                         \033[A")
 	except KeyboardInterrupt:
 		pass
 	# Countdown
@@ -65,7 +65,7 @@ def manual_fire(coilgun: Coilgun):
 		filename=config.data_logging_path,
 		voltages=fire_voltages, 
 		velocities=velocities, 
-		efficiencies=total_efficiency,
+		efficiencies=coil_efficiency,
 		trigger_times=trigger_times
 	)
 
