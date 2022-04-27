@@ -5,7 +5,7 @@
 
 
 int all_fire_pins[8] = {25, 29, 33, 37, 41, 45, 49, 53};
-int all_sensor_pins[8] = {23, 27, 31, 23, 51, 47, 43, 35};
+int all_sensor_pins[8] = {39, 27, 31, 23, 51, 47, 43, 35};
 int all_voltage_pins[8] = {A7, A6, A5, A4, A3, A2, A1, A0};
 int all_drain_pins[8] = {24, 28, 32, 36, 40, 44, 48, 52};
 int all_HV_pins[8] = {22, 26, 30, 34, 38, 42, 46, 50};

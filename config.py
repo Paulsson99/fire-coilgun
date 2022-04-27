@@ -3,7 +3,7 @@ projectile_diameter = 8.8e-3 	# [m]
 projectile_mass = 3.0e-3 		# [kg]
 
 # Arduino
-port = "COM3"
+port = "/dev/cu.usbmodem14201"
 baudrate = 115200
 timeout = 10            # [s]
 
@@ -21,4 +21,4 @@ console_logger_level = logging.INFO
 console_logger_format = '%(levelname)s : %(message)s'
 
 # Data logging
-data_logging_path = "data_loggs/opt_first_coil/data"
+data_logging_path = "data_loggs/opt_first_coil/250_2/data"

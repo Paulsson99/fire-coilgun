@@ -13,9 +13,9 @@ import os
 
 # For logging of a shot
 # Number of windings on a coil
-windings = [150,0,0,0,0,0,0,0]
+windings = [250,0,0,0,0,0,0,0]
 # Position relative sensor [mm] (end of sensor to start of coil)
-positions = [23,0,0,0,0,0,0,0]
+positions = [15,0,0,0,0,0,0,0]
 
 
 def get_voltages(coils: int):
@@ -39,7 +39,7 @@ def manual_fire(coilgun: Coilgun):
 	try: 
 		while True:
 			print_data(coilgun.READ_VOLTAGES(), units='V')
-			time.sleep(1)
+			time.sleep(0.2)
 			print("\033[A                                                         \033[A")
 	except KeyboardInterrupt:
 		pass

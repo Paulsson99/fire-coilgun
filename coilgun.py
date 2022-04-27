@@ -14,7 +14,7 @@ class Coil:
 		capacitance: float,			# Total capacitance in the capacitance bank [F]
 		R1: float, 					# First resistance in the voltage divider
 		R2: float, 					# Second resistance in the voltage divider
-		ON: bool 					# Is the coil on?
+		state: bool 				# Is the coil on?
 	):
 		self.capacitance = capacitance
 
@@ -24,7 +24,7 @@ class Coil:
 		# Is ready
 		self.READY = False
 
-		self.ON = ON
+		self.ON = state
 
 		# Set a unique ID
 		self.id = Coil.TOTAL
@@ -92,6 +92,10 @@ class Coil:
 		"""Turn on the coil"""
 		self.ON = True
 
+	def turn_off(self):
+		"""Turn off the coil"""
+		self.ON = False
+
 	def reset(self):
 		"""Reset the coil"""
 		self.READY = False
@@ -146,12 +150,7 @@ class Coilgun:
 		# Logging
 		self.logger.debug("Coilgun was turned off")
 
-	def ON(self, coils_to_turn_on: list[bool]):
-		for coil, coil_on in zip(self, coils_to_turn_on):
-			# Turn on the coils (impossible to charge otherwise)
-			if coil_on:
-				coil.turn_on()
-
+	def ON(self):
 		self.MAIN_HV_ON()
 		self.DRAIN_ALL(False)
 		self.HV_ALL(True)
@@ -217,7 +216,7 @@ class Coilgun:
 		"""Drain all CBs"""
 		# This is flipped because the relay is NC
 		# Only 
-		CBs_to_drain = [(not CB) and (not coil.ON) for CB, coil in zip(CBs_to_drain, self)]
+		CBs_to_drain = [(not CB) and (coil.ON) for CB, coil in zip(CBs_to_drain, self)]
 		message = self.convert_bool_list_to_Arduino_message(CBs_to_drain)
 		self.logger.debug(f"Draining command: {message}")
 
@@ -238,7 +237,7 @@ class Coilgun:
 	def HV_2_CB(self, HV_states: list[bool]):
 		"""Turn HV ON/OFF"""
 		# Only allow HV to be turned on for a coil that is ON
-		HV_states = [HV_state and coil.ON for zip(HV_states, self)]
+		HV_states = [HV_state and coil.ON for HV_state, coil in zip(HV_states, self)]
 		message = self.convert_bool_list_to_Arduino_message(HV_states)
 		self.logger.debug(f"HV command: {message}")
 

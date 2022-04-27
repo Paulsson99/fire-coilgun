@@ -48,8 +48,8 @@ def test_coilgun():
 	coilgun = Coilgun(coils, arduino, config.projectile_diameter, config.projectile_mass, logger=logger)
 
 	# Turn ON all coils so they can be tested
-	for coil in coilgun:
-		coil.turn_on()
+	# for coil in coilgun:
+	# 	coil.turn_on()
 
 	# coilgun.CHARGE_COILGUN([150])
 	# coilgun.FIRE()
