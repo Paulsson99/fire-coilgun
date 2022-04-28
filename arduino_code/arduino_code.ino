@@ -24,7 +24,7 @@ void setup() {
     sensor_pins[i] = all_sensor_pins[i];
     voltage_pins[i] = all_voltage_pins[i];
     drain_pins[i] = all_drain_pins[i];
-    HV_pins[i] = all_HV_pins[i]; 
+    HV_pins[i] = all_HV_pins[i];
   }
   
   for (int i = 0; i < 8; i++) {
