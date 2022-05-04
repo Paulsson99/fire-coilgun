@@ -15,7 +15,7 @@ import os
 # Number of windings on a coil
 windings = [100,0,0,0,0,0,0,0]
 # Position relative sensor [mm] (end of sensor to start of coil)
-positions = [28,0,0,0,0,0,0,0]
+positions = [0,0,0,0,0,0,0,0]
 
 
 def get_voltages(coils: int):
