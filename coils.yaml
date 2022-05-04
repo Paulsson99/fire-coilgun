@@ -8,40 +8,40 @@ coil2:
   capacitance: 1067.e-6     # Total capacitance in the capacitance bank [F]
   R1: 22.e+6                # First resistance in the voltage divider
   R2: 82.e+3                # Second resistance in the voltage divider
-  state: OFF                 # Is the coil ON or OFF
+  state: ON                 # Is the coil ON or OFF
 
 coil3:
   capacitance: 1067.e-6     # Total capacitance in the capacitance bank [F]
   R1: 22.e+6                # First resistance in the voltage divider
   R2: 82.e+3               # Second resistance in the voltage divider
-  state: OFF                 # Is the coil ON or OFF
+  state: ON                 # Is the coil ON or OFF
 
 coil4:
   capacitance: 1067.e-6     # Total capacitance in the capacitance bank [F]
   R1: 22.e+6                # First resistance in the voltage divider
   R2: 82.e+3                # Second resistance in the voltage divider
-  state: OFF                 # Is the coil ON or OFF
+  state: ON                 # Is the coil ON or OFF
 
 coil5:
   capacitance: 1067.e-6     # Total capacitance in the capacitance bank [F]
   R1: 22.e+6                # First resistance in the voltage divider
   R2: 82.e+3               # Second resistance in the voltage divider
-  state: OFF                 # Is the coil ON or OFF
+  state: ON                 # Is the coil ON or OFF
 
 coil6:
   capacitance: 1067.e-6     # Total capacitance in the capacitance bank [F]
   R1: 22.e+6                # First resistance in the voltage divider
   R2: 100.e+3                # Second resistance in the voltage divider
-  state: OFF                 # Is the coil ON or OFF
+  state: ON                 # Is the coil ON or OFF
 
 coil7:
   capacitance: 1067.e-6     # Total capacitance in the capacitance bank [F]
   R1: 22.e+6                # First resistance in the voltage divider
   R2: 82.e+3                # Second resistance in the voltage divider
-  state: OFF                 # Is the coil ON or OFF
+  state: ON                 # Is the coil ON or OFF
 
 coil8:
   capacitance: 1067.e-6     # Total capacitance in the capacitance bank [F]
   R1: 22.e+6                # First resistance in the voltage divider
   R2: 82.e+3                # Second resistance in the voltage divider
-  state: OFF                 # Is the coil ON or OFF
+  state: ON                 # Is the coil ON or OFF

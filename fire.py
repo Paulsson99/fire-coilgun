@@ -13,9 +13,9 @@ import os
 
 # For logging of a shot
 # Number of windings on a coil
-windings = [100,0,0,0,0,0,0,0]
+windings = [200,150,150,100,100,100,100,0]
 # Position relative sensor [mm] (end of sensor to start of coil)
-positions = [0,0,0,0,0,0,0,0]
+positions = [30,14,23,32,32,35,38,0]
 
 
 def get_voltages(coils: int):

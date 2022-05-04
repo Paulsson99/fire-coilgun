@@ -3,7 +3,7 @@ projectile_diameter = 8.8e-3 	# [m]
 projectile_mass = 3.0e-3 		# [kg]
 
 # Arduino
-port = "/dev/cu.usbmodem14201"
+port = "COM3"
 baudrate = 115200
 timeout = 10            # [s]
 
