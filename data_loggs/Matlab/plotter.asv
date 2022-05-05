@@ -1,0 +1,37 @@
+% Kod för att plotta figurer, OBS kaos copy pasta 
+
+cd 1st_coil/200_2
+data1 = [];
+files = dir('*.csv');
+for i=1:length(files)
+    data1 = [data1; load(files(i).name, '-ascii')];
+end
+cd ../250_2
+data_2 = [];
+files = dir('*.csv');
+for i=1:length(files)
+    data2 = [data2; load(files(i).name, '-ascii')];
+end
+cd ../250_3
+data_3 = [];
+files = dir('*.csv');
+for i=1:length(files)
+    data3 = [data2; load(files(i).name, '-ascii')];
+end
+
+
+
+[~,idx] = unique(data1(:,6));
+data1 = data1(idx,:);
+
+[~,idx] = unique(data2(:,6));
+data2 = data2(idx,:);
+
+
+plot(data1(:,6), data1(:,2));
+
+hold on
+title('2 cm spole 200 varv')
+xlabel('Kulans startposition [mm]')
+ylabel('Utgångshastighet [m/s]')
+cd ../..
