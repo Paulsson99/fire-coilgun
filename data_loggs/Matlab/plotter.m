@@ -168,9 +168,28 @@ hold on
 bar(data1(:,1)+1, dv,0.1)
 %hold on
 %bar(data1(:,1)+1, dT,0.2)
-legend({'Hastighet efter varje spole', 'Hastighetsökning dv'},'Location','northwest')
-title('')
+legend({'Hastighet efter varje spole', 'Hastighetsökning efter varje spole'},'Location','northwest')
+title('Kulans hastighet efter varje spole vid 7 spolar')
 xlabel('Spole')
 ylabel('Hastighet [m/s]')
 
+
+%% coil 8
+
+data1= csvread('8th_coil/8_54.32.csv');
+v = [0 ;  data1(:,2)];
+dv = v(2:9)-v(1:8);
+
+T = v.^2;
+dT = T(2:9)-T(1:8);
+
+plot(data1(:,1)+1, data1(:,2),'*-');
+hold on
+bar(data1(:,1)+1, dv,0.1)
+%hold on
+%bar(data1(:,1)+1, dT,0.2)
+legend({'Hastighet efter varje spole', 'Hastighetsökning efter varje spole'},'Location','northwest')
+title('Kulans hastighet efter varje spole vid 8 spolar')
+xlabel('Spole')
+ylabel('Hastighet [m/s]')
 
