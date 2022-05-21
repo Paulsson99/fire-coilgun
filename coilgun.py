@@ -105,7 +105,7 @@ class Coil:
 class Coilgun:
 	"""Class for controling the coilgun"""
 
-	MAX_VOLTAGE_FOR_SAFE_DRAIN = 15
+	MAX_VOLTAGE_FOR_SAFE_DRAIN = 20
 
 	def __init__(
 		self, 
@@ -139,6 +139,7 @@ class Coilgun:
 
 	def OFF(self):
 		"""Reset the coilgun"""
+		self.arduino.flush_serial()
 		self.MAIN_HV_OFF()
 		# Drain and turn off HV to all CBs
 		self.DRAIN_ALL(True)
@@ -151,9 +152,16 @@ class Coilgun:
 		self.logger.debug("Coilgun was turned off")
 
 	def ON(self):
-		self.MAIN_HV_ON()
 		self.DRAIN_ALL(False)
+		self.MAIN_HV_ON()
 		self.HV_ALL(True)
+		self.arduino.send(Arduino.CHARGE)
+		response = self.arduino.read()
+		if not response == Arduino.CHARGE_RESPONSE:
+			self.logger.warning(f"Arduino did not swith to the charge state correctly. Responded with: '{response}")
+			# raise CommunicationError(f"Arduino did not turn on main HV correctly. Responded with: '{response}")
+		else:
+			self.logger.debug(f"Arduino swithed to charge state")
 		# Logging
 		self.logger.debug("Coilgun was turned on")
 
@@ -255,6 +263,27 @@ class Coilgun:
 		"""Turn HV ON/OFF for all coils depending on the variable 'HV_state'"""
 		self.HV_2_CB([HV_state] * len(self))
 
+	def START_COUNTDOWN(self):
+		"""Start the countdown"""
+		self.arduino.send(Arduino.COUNTDOWN)
+		response = self.arduino.read()
+		if not response == Arduino.COUNTDOWN_RESPONSE:
+			self.logger.warning(f"Arduino did not start a countdown correctly. Responded with: '{response}")
+			# raise CommunicationError(f"Arduino did not turn on main HV correctly. Responded with: '{response}")
+		else:
+			self.logger.debug(f"Contdown started")
+
+	def DISPLAY_CHARGE(self, percent):
+		"""Display the current percentage of the maximum voltage"""
+		self.arduino.send(Arduino.DISPLAY_CHARGE)
+		self.arduino.send(str(percent))
+		response = self.arduino.read()
+		if not Arduino.DISPLAY_CHARGE_RESPONSE in response:
+			self.logger.warning(f"Arduino did not display the charge correctly. Responded with: '{response}")
+			# raise CommunicationError(f"Arduino did not turn on main HV correctly. Responded with: '{response}")
+		else:
+			self.logger.debug(f"Displaying charge of {percent:.01%}")
+
 	def CHARGE_COILGUN(self, max_voltages: list[float]):
 		"""Charge the coilgun"""
 		self.DRAIN_CB([False] * len(self))
@@ -289,6 +318,15 @@ class Coilgun:
 
 		self.logger.debug(f"Sensors values are: {response}")
 		return response
+
+	def BLINK(self):
+		self.arduino.send(Arduino.BLINK)
+		response = self.arduino.read()
+		if not response == Arduino.BLINK_RESPONSE:
+			self.logger.warning(f"Arduino did not start blinking correctly. Responded with: '{response}")
+			# raise CommunicationError(f"Arduino did not turn on main HV correctly. Responded with: '{response}")
+		else:
+			self.logger.debug(f"Arduino is now blinking")
 
 	def ABORT(self):
 		"""Abort command execution on Arduino"""

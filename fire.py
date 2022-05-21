@@ -33,19 +33,37 @@ def get_voltages(coils: int):
 		voltages.append(volt)
 	return voltages
 
-def manual_fire(coilgun: Coilgun):
+def manual_fire(coilgun: Coilgun, voltage: float):
 	"""Fire the coilgun manualy"""
 	coilgun.ON()
+	charged = False
 	try: 
 		while True:
-			print_data(coilgun.READ_VOLTAGES(), units='V')
-			time.sleep(0.2)
-			print("\033[A                                                         \033[A")
+			voltages = np.array(coilgun.READ_VOLTAGES())
+			percent = float(np.amax(voltages / voltage))
+			if percent >= 1:
+				if not charged:
+					charged = True
+					coilgun.BLINK()
+				percent = 1.0
+			coilgun.DISPLAY_CHARGE(percent)
+			print("\033[A                                                                         \033[A")
+			print_data(voltages, units='V')
+			time.sleep(0.1)
 	except KeyboardInterrupt:
 		pass
-	except:
-		print("Warning did not read correctly from Arduino. Fireing anyway")
+	except Exception as e:
+		print(e)
+		input("Something went wrong. Press enter to shoot so the CBs empty")
+		coilgun.FIRE()
+		time.sleep(1)
+		coilgun.OFF()
+		quit()
+
+	coilgun.ABORT()
+	
 	# Countdown
+	coilgun.START_COUNTDOWN()
 	for i in range(3):
 		time.sleep(1)
 		print(3-i)
@@ -198,12 +216,18 @@ def main():
 
 	try:
 		while True:
-			if input("Press enter to start fire sequence (q to quit): ") == '':
-				# fire(coilgun)
-				manual_fire(coilgun)
-			else:
+			input_command = input("Input voltage to start fire sequence (q to quit): ")
+			if input_command.lower().startswith('q'):
 				print("Quiting...")
 				break
+			else:
+				try:
+					voltage = float(input_command)
+				except ValueError:
+					print(f'Could not convert input {input_command} to a float')
+				else:
+					manual_fire(coilgun, voltage)
+				
 	finally:
 		# Alwasy turn off HV and drain the CBs
 		# coilgun.shutdown()

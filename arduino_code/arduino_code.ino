@@ -5,7 +5,7 @@
 
 
 int all_fire_pins[8] = {25, 29, 33, 37, 41, 45, 49, 53};
-int all_sensor_pins[8] = {39, 27, 31, 23, 51, 47, 43, 35};
+int all_sensor_pins[8] = {39, 27, 31, 47, 51, 23, 43, 35};
 int all_voltage_pins[8] = {A7, A6, A5, A4, A3, A2, A1, A0};
 int all_drain_pins[8] = {24, 28, 32, 36, 40, 44, 48, 52};
 int all_HV_pins[8] = {22, 26, 30, 34, 38, 42, 46, 50};
@@ -16,6 +16,8 @@ int voltage_pins[COILS];
 int drain_pins[COILS];
 int HV_pins[COILS];
 
+enum CoilgunState { OFFLINE, CHARGE, CHARGE_DONE, COUNTDOWN, FIRE };
+CoilgunState currentState =  OFFLINE;
 
 void setup() {
   // Setup all the pins
@@ -40,6 +42,9 @@ void setup() {
   SetPins(all_HV_pins, "00000000", 8);
   // Begin serial communication
   Serial.begin(115200);
+
+  // Setup LED strip
+  setupLED();
 }
 
 void loop() {
@@ -68,6 +73,18 @@ void loop() {
   else if (command == "SENSORS") {
     ReadSensors();
   }
+  else if (command == "CHARGE") {
+    Charge();
+  }
+  else if (command == "BLINK") {
+    Blink();
+  }
+  else if (command == "DISPLAY_CHARGE") {
+    DisplayCharge();
+  }
+  else if (command == "COUNTDOWN") {
+    Countdown();
+  }
   else if (command == "ABORT") {
     PrintSerial("ABORTING");
   }
@@ -75,18 +92,28 @@ void loop() {
     PrintSerial("OK");
   }
   else {
-    PrintSerial("UNKNOWN COMMAND...");
+    PrintSerial("UNKNOWN COMMAND... : " + command);
   }
 }
 
 String ReadSerial() {
   while (Serial.available() == 0) {
-    // Wait for command from the RP
-    // Serial.print(digitalRead(sensor_pins[0]));
-    // Serial.print(", ");
-    // Serial.println(digitalRead(sensor_pins[1]));
+    // Wait for serial comunication and light up the LED-strip
+    switch (currentState) {
+      case OFFLINE: loopLED(); break;
+      case CHARGE: break;
+      case CHARGE_DONE: BlinkLED(); break;
+      case COUNTDOWN: countdownLED(); break;
+      case FIRE: break;
+      default: break;
+    }
   }
+  // Flush serial
+  delay(1);
+  while (Serial.available() > 0) { Serial.read(); }
 
+  // Read actual data
+  PrintSerial("OK");
   return Serial.readStringUntil(END);
 }
 
@@ -106,6 +133,29 @@ void SendData(unsigned long data[], int size_of_data) {
   PrintSerial(content);
 }
 
+void Countdown() {
+  currentState = COUNTDOWN;
+  startCountdownLed();
+  PrintSerial("COUNTDOWN STARTED");
+}
+
+void Charge() {
+  currentState = CHARGE;
+  ChargeBar(0.0);
+  PrintSerial("CHARGING COILGUN");
+}
+
+void DisplayCharge() {
+  float charge_percent = ReadSerial().toFloat();
+  ChargeBar(charge_percent);
+  PrintSerial((String)"DISPLAY SET TO: " + charge_percent);
+}
+
+void Blink() {
+  StartBlink();
+  currentState = CHARGE_DONE;
+}
+
 void ON() {
   digitalWrite(MAIN_HV_PIN, LOW);
   PrintSerial("HV ON");
@@ -117,6 +167,9 @@ void OFF() {
 }
 
 void Fire() {
+  currentState = FIRE;
+  // Shutdown LED-strip
+  ChargeBar(0.0);
   unsigned long blocking_times[COILS];
   unsigned long trigger_time[COILS];
   unsigned long start_time = micros();
@@ -136,6 +189,7 @@ void Fire() {
 
   SendData(blocking_times, COILS);
   SendData(trigger_time, COILS);
+  currentState = OFFLINE;
 }
 
 void ReadVoltage() {
