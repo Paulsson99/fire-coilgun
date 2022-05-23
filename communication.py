@@ -6,6 +6,8 @@ import time
 class Arduino:
 	"""Class for communicating with a Arduino"""
 
+	HEADER = "1"
+
 	# Commands
 	FIRE = "FIRE"
 	READ_VOLTAGES = "VOLTAGE"
@@ -13,25 +15,33 @@ class Arduino:
 	OFF = "OFF"
 	HV = "HV"
 	DRAIN = "DRAIN"
+	COUNTDOWN = "COUNTDOWN"
+	CHARGE = "CHARGE"
+	DISPLAY_CHARGE = "DISPLAY_CHARGE"
 	TEST = "TEST"
 	SENSORS = "SENSORS"
 	ABORT = "ABORT"
+	BLINK = "BLINK"
 
 	# Expected responses
 	OK = "OK"			# A good test
 	HV_ON = "HV ON"		# HV sucessfully turned on
 	HV_OFF = "HV OFF"	# HV sucessfully turned off
 	DRAIN_RESPONSE = "Drain pins set to: "
+	COUNTDOWN_RESPONSE = "COUNTDOWN STARTED"
+	CHARGE_RESPONSE = "CHARGING COILGUN"
+	DISPLAY_CHARGE_RESPONSE = "DISPLAY SET TO: "
 	HV_RESPONSE = "HV pins set to: "
 	SENSOR_RESPONSE = "Sensors are: "
 	ABORT_RESPONSE = "ABORTING"
+	BLINK_RESPONSE = "BLINKING"
 
 	# Communication chars
 	END = '\n'
 	SEP = ','
 
 
-	def __init__(self, port: str, baudrate: int, timeout: int=1):
+	def __init__(self, port: str, baudrate: int, timeout: int=10):
 		self.port = port
 		self.baudrate = baudrate
 		self.timeout = timeout
@@ -40,16 +50,22 @@ class Arduino:
 
 	def send(self, message: str):
 		"""Send a message to the Arduino"""
-		self.arduino.write(bytes(message + Arduino.END, 'utf-8'))
+		self.arduino.write(bytes(Arduino.HEADER, 'utf-8'))
+		ready = self.read()
+		if ready == Arduino.OK:
+			self.arduino.write(bytes(message + Arduino.END, 'utf-8'))
+		else:
+			self.send(message)
 
 	def read(self) -> str:
 		"""Read a response from the Arduino"""
 		response = ""
 		while True:
 			char = self.arduino.read().decode('utf-8')
-			if Arduino.END == char or char == '':
+			if Arduino.END == char:
 				break
-			response += char
+			elif char:
+				response += char
 		return response
 
 	def test_connection(self, test_times: int=10) -> bool:
