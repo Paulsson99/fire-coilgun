@@ -193,3 +193,14 @@ title('Kulans hastighet efter varje spole vid 8 spolar')
 xlabel('Spole')
 ylabel('Hastighet [m/s]')
 
+%%
+
+before = [21.51, 33.59, 40.0, 43.78, 45.12, 51.16, 53.66];
+after = [19.91, 31.21, 40.0, 36.21, 44.44, 47.05, 53.33];
+bar([before', after']);
+%hold on
+%bar(data1(:,1)+1, dT,0.2)
+legend({'Hastighet utan efterträdande spole', 'Hastighet med efterträdande spole'},'Location','northwest')
+title('Kulans hastighet med och utan efterträdande spole')
+xlabel('Spole')
+ylabel('Hastighet [m/s]')
